@@ -1,0 +1,61 @@
+# Replace filler entries with your program's official "Top 25" lists.
+# Matching is case-insensitive; substring match after normalization (see match_school).
+
+medical_school_top25:
+  - Harvard Medical School
+  - Johns Hopkins School of Medicine
+  - Stanford University School of Medicine
+  - University of Pennsylvania Perelman School of Medicine
+  - Columbia Vagelos College of Physicians and Surgeons
+  - Mayo Clinic Alix School of Medicine
+  - Washington University School of Medicine in St. Louis
+  - Yale School of Medicine
+  - Duke University School of Medicine
+  - University of California San Francisco School of Medicine
+  - Northwestern University Feinberg School of Medicine
+  - University of Michigan Medical School
+  - Vanderbilt University School of Medicine
+  - Icahn School of Medicine at Mount Sinai
+  - University of Pittsburgh School of Medicine
+  - University of California Los Angeles David Geffen School of Medicine
+  - University of Chicago Pritzker School of Medicine
+  - Case Western Reserve University School of Medicine
+  - Cleveland Clinic Lerner College of Medicine
+  - University of Texas Southwestern Medical School
+  - Weill Cornell Medicine
+  - New York University Grossman School of Medicine
+  - Baylor College of Medicine
+  - Emory University School of Medicine
+  - University of Washington School of Medicine
+
+# If the applicant's medical school matches any substring (case-insensitive),
+# Medical School Performance uses the rubric *** P/F-only rule (2.25 points) when
+# no Honors/High Pass grades are detected. Leave empty unless you explicitly want automation.
+pass_fail_only_medical_school_keywords: []
+
+undergraduate_top25:
+  - Harvard University
+  - Stanford University
+  - Massachusetts Institute of Technology
+  - Yale University
+  - Princeton University
+  - California Institute of Technology
+  - Duke University
+  - Johns Hopkins University
+  - Northwestern University
+  - University of Pennsylvania
+  - Columbia University
+  - University of Chicago
+  - Brown University
+  - Cornell University
+  - University of California Berkeley
+  - University of California Los Angeles
+  - Rice University
+  - Vanderbilt University
+  - University of Notre Dame
+  - Georgetown University
+  - Carnegie Mellon University
+  - University of Michigan
+  - University of Virginia
+  - Case Western Reserve University
+  - Emory University

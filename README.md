@@ -146,8 +146,7 @@ This prevents the model from making subjective scoring decisions and ensures rul
 
 ## Scripts (in `llm_scoring/`)
 
-- `screen_qwen.py` — Qwen3:14B scoring via Ollama (local Mac/PC)
-- `screen_vllm.py` — LLaMA 3.3:70B scoring via vLLM (Quest HPC)
+- `screen.py` — Qwen3:14B scoring via Ollama (local Mac/PC)
 
 ## Limitations (step 2)
 

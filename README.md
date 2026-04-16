@@ -115,3 +115,43 @@ Do **not** commit/push:
 - **USMLE Step 1:** Assumes ERAS-style examination blocks; nonstandard score reports may require manual entry.
 
 Later phases (narrative summaries, pool characterization, optional AI) can build on the same module boundaries.
+
+## Step 2: LLM-Based Scoring (In Progress)
+
+This step scores subjective rubric dimensions that require reading and understanding free-text content such as personal statements, research descriptions, and leadership activities.
+
+To protect applicant privacy, all LLM inference runs **locally** — no data is sent to external servers or cloud APIs.
+
+## Rubric fields tested (step 2)
+
+| Field | Scoring approach |
+|--------|-----------------|
+| Scientific Pursuits — Education/Experience | LLM extracts research roles and durations; Python calculates score |
+| Professional Leadership — Output | LLM classifies entrepreneurial/leadership activities; Python calculates score |
+
+Remaining dimensions are planned for subsequent iterations.
+
+## Key design principle (step 2)
+
+**The LLM extracts facts only. Python calculates the score.**
+
+This prevents the model from making subjective scoring decisions and ensures rules are applied consistently.
+
+## Models tested
+
+| Model | Hardware | Status |
+|-------|----------|--------|
+| Qwen3:14B | Mac M4 24GB, via Ollama | Tested — limited instruction-following on complex boundaries |
+| LLaMA 3.3:70B | Northwestern Quest HPC (A100 80GB), via vLLM | Testing in progress |
+
+## Scripts (in `llm_scoring/`)
+
+- `screen_qwen.py` — Qwen3:14B scoring via Ollama (local Mac/PC)
+- `screen_vllm.py` — LLaMA 3.3:70B scoring via vLLM (Quest HPC)
+
+## Limitations (step 2)
+
+- **Model instruction-following:** Smaller models (14B) struggle to apply complex boundary rules consistently. Larger models (70B) are being tested.
+- **Resume format variance:** PDFs converted to text may include school course descriptions mixed with personal content, requiring preprocessing to isolate the applicant's own activities.
+- **Subjective dimensions:** Some rubric criteria (e.g., Resilience, Endorsement quality) require human judgment and may not be fully automatable.
+

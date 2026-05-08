@@ -16,11 +16,11 @@ This step uses **rule-based parsing only** (no LLM). Outputs are **draft scores*
 
 School lists are **configurable YAML** in `application_analyzer/config/school_lists.yaml`. Replace the placeholder Top 25 entries with your official lists.
 
-The rubric’s **2.25** P/F-only medical school rule is **not** inferred from generic PDF text (that caused false positives). Optionally add substrings under `pass_fail_only_medical_school_keywords` for schools where your committee always applies that rule.
+The rubric's **2.25** P/F-only medical school rule is **not** inferred from generic PDF text (that caused false positives). Optionally add substrings under `pass_fail_only_medical_school_keywords` for schools where your committee always applies that rule.
 
 ## Privacy and data handling (important)
 
-- These PDFs contain **identifying education and test information**. Store them on **encrypted drives**, limit access to reviewers, and follow your institution’s **FERPA/HIPAA** policies.
+- These PDFs contain **identifying education and test information**. Store them on **encrypted drives**, limit access to reviewers, and follow your institution's **FERPA/HIPAA** policies.
 - The tool writes **Excel summaries**; treat outputs like source PDFs. Do not commit real applicant PDFs or filled rubrics to public repositories.
 - Logs: use `--json` for structured extraction details; redirect to a secure location if needed.
 - This repo includes a `.gitignore` that excludes `applications/`, `rubric/`, PDFs, and generated XLSX output files by default.
@@ -111,18 +111,42 @@ Do **not** commit/push:
 
 - **Layout variance:** Different schools format transcripts differently. Clerkship lines may wrap oddly; the parser merges common Internal Medicine wraps but may miss rare formats.
 - **Medical School Performance:** Honors/High Pass detection depends on transcript wording (e.g., `H`, `COM`, `CCD`). Ambiguous cases need manual review.
-- **P/F-only schools (`2.25`):** Only applied when the applicant’s extracted medical school matches a substring you list in `pass_fail_only_medical_school_keywords` in the YAML config.
+- **P/F-only schools (`2.25`):** Only applied when the applicant's extracted medical school matches a substring you list in `pass_fail_only_medical_school_keywords` in the YAML config.
 - **USMLE Step 1:** Assumes ERAS-style examination blocks; nonstandard score reports may require manual entry.
 
 Later phases (narrative summaries, pool characterization, optional AI) can build on the same module boundaries.
 
 ---
 
-## Step 2: LLM scoring — `screen.py`
+## Steps 2 & 3: Integrated pipeline — `pipeline.py`
 
-Step 2 uses a local Qwen3-32B model (via Ollama) to score the seven qualitative rubric dimensions that rule-based parsing cannot reliably handle.
+`pipeline.py` combines LLM scoring (step 2) and AI agent evaluation (step 3) into a single end-to-end run. It takes a plain-text application file as input and produces a full structured JSON output covering all three layers.
 
-### Rubric fields (step 2)
+### Architecture overview
+
+```
+Layer 1 (Python rules)     →  MSQ, MSP, UQ, UP, USMLE
+Layer 2 (LLM + Python)     →  SPE, SPO, PLE, PLO, SL, DT, ELW
+Layer 3 (AI agents)        →  Dr. Pyatetsky + Dr. Mirza → A/B/C recommendation
+```
+
+Each layer feeds into the next. Layer 3 agents receive the numeric scores from layers 1 and 2 as input — they do not re-score the rubric dimensions.
+
+### Layer 1: Python rule-based scoring
+
+LLM extracts raw facts (school names, GPA, USMLE result, clinical rotation grades), then Python applies deterministic scoring rules. No judgment involved.
+
+| Dimension | Rule |
+|-----------|------|
+| MSQ | Top 25 medical school → 4, otherwise 0 |
+| MSP | Honors count in clinical rotations → 4/3/2/1/0; P/F-only school → 2.25 |
+| UQ | Top 25 undergrad → 2, otherwise 0 |
+| UP | GPA ≥ 3.8 → 4, ≥ 3.5 → 3, ≥ 3.25 → 2, ≥ 3.0 → 1, < 3.0 → 0 |
+| USMLE | Passed first attempt → P, otherwise F |
+
+### Layer 2: LLM fact extraction + Python scoring
+
+Each of the 7 qualitative dimensions is scored by a separate focused prompt. The model extracts facts only — scoring logic is applied in Python after the model returns structured JSON.
 
 | Code | Dimension | Max |
 |------|-----------|-----|
@@ -134,119 +158,100 @@ Step 2 uses a local Qwen3-32B model (via Ollama) to score the seven qualitative 
 | DT | Resilience / Grit / Distance Travelled | 4 |
 | ELW | Endorsement by Letter Writers | 4 |
 
-**Total step 2 score: 26 points.**
+**Layer 2 total: 26 points.**
 
-### How it works
+`PLO` uses a four-call chain: three independent questions (for-profit business, large-scale public health program, technical product) followed by a self-reflection check.
 
-Each dimension is scored by a separate, focused prompt. The model is instructed to extract facts only (no scoring language in the prompt), and scoring logic is applied in Python after the model returns structured JSON. This separation reduces hallucination on boundary cases.
+### Layer 3: AI agent perspectives
 
-`PLO` uses a four-call chain: three independent questions (for-profit business, large-scale public health program, technical product) followed by a self-reflection check. The final score depends on which combination triggers.
+Two agents each run in two steps:
 
-### Run on Quest
+**Step A** — each agent reads the raw application text and extracts the signals it specifically cares about (subjective evidence, not re-scoring).
 
-```bash
-# Upload application text file
-scp "Applicant_Name.txt" uam1146@quest.northwestern.edu:~/resume_screening/
-
-# On Quest: set RESUME_PATH in screen.py, then submit
-sed -i 's/RESUME_PATH = .*/RESUME_PATH = "Applicant_Name.txt"/' screen.py
-sbatch run_ollama.sh
-```
-
-Results appear in `logs_<jobid>.out`.
-
-### Known limitations
-
-- The model occasionally includes excluded role types (tutoring, medical assistant, interpreter) in SPE research role extraction despite explicit exclusion rules in the prompt. SPE scores should be spot-checked against the raw JSON in the detailed output.
-- DT (resilience) scores 0 when the personal statement does not make an explicit, specific argument. Generic phrases do not count by design, but this means strong candidates who undersell their challenges will be underscored.
-- All data stays local — no applicant text is sent to any external API.
-
----
-
-## Step 3: AI agent perspectives — `agents.py`
-
-Step 3 runs two independent AI agents, each representing a distinct faculty reviewer perspective. The agents read the same application text and produce structured assessments that complement the numeric rubric scores from steps 1 and 2.
-
-### Agent design
-
-Both agents use Qwen3-32B via Ollama with a detailed system prompt encoding each reviewer's known evaluation philosophy. The prompts were derived from two recorded faculty meetings (April and May 2026) in which Dr. Pyatetsky and Dr. Mirza described their evaluation frameworks in their own words.
+**Step B** — each agent receives the layer 1 + 2 numeric scores alongside its step A signals and produces a final A/B/C recommendation with rationale.
 
 #### Dr. Pyatetsky agent
 
 **Philosophy:** structured, data-driven, rubric-anchored.
 
-Key behaviors:
-- Classifies every applicant as `WORKHORSE`, `SUPERSTAR`, or `NOT_QUALIFIED`
-- **WORKHORSE** (~75% of accepted residents): consistent high-level performance across all domains throughout the entire application, not just in one phase; broad achievements; evidence of resilience
-- **SUPERSTAR** (~25%): genuinely exceptional in one specific domain (most commonly research output, occasionally entrepreneurial leadership); must still meet a minimum baseline everywhere else — no evidence of failure in other areas
-- **NOT_QUALIFIED**: zeros across multiple bottom-category dimensions; filtered out without further review
-- Reads the transcript grading legend before scoring Medical School Performance; applies the 2.25 default for P/F-only schools
-- Flags letter quality mismatches (strong CV + weak letters = significant concern)
-- Trajectory is a primary signal: declining trajectory is an explicit red flag; a setback followed by recovery is resilience, not a red flag
+Step A extracts: trajectory pattern (upward/flat/declining), superstar signals (research excellence or entrepreneurial impact), workhorse signals (consistent broad achievement), red flags, letter quality.
 
-Output includes: classification, per-dimension scores with evidence, trajectory pattern, filter recommendation, and a one-sentence committee note.
+Step B judgment rules:
+- **WORKHORSE**: consistent high-level performance across all dimensions throughout; broad achievements; resilience evidence. ~75% of accepted residents.
+- **SUPERSTAR**: genuinely exceptional in one domain AND meets minimum baseline everywhere else. ~25% of accepted residents.
+- **NOT_QUALIFIED**: multiple zeros in bottom-category dimensions. Filtered out.
+- **A**: SUPERSTAR, or combined score ≥ 28 with no red flags
+- **B**: WORKHORSE with combined score ≥ 20, or strong in 2+ dimensions
+- **C**: NOT_QUALIFIED, multiple red flags, or combined score < 15
 
 #### Dr. Mirza agent
 
 **Philosophy:** holistic, soft-skills-focused, compensatory.
 
-Key behaviors:
-- Does not classify into Workhorse/Superstar buckets; evaluates who the person is, not just what they have done
-- Primary lens: **teamwork, communication, compassion, empathy** — looks for explicit signals in essays and letters, not inferred from activities alone
-- School quality is a **threshold check, not a ranking tool**: a candidate excelling at a lesser-known school can equal or exceed a mediocre candidate from a top-25 school
-- Reads letters for corroboration (two writers independently mentioning the same soft skill = strong signal) and notable absences (e.g., no letter from a research supervisor for a heavy research applicant)
-- Trajectory patterns: upward (highly positive), flat (reliable), declining (red flag), burst-then-absent (needs explanation); an unrecovered decline is a red flag; a setback that was overcome is a resilience signal
-- Volunteerism beyond the checklist is a positive signal
+Step A extracts: teamwork signals, empathy/compassion signals, communication quality, trajectory, letter soft-skill mentions (corroboration across writers), school context, volunteerism beyond checklist.
 
-Output includes: per-soft-skill ratings with specific quotes, trajectory pattern with evidence, school quality compensatory notes, letter quality soft-skill mentions, character impression, rubric blind spots, and a gut-reaction sentence.
+Step B judgment rules:
+- **A**: strong soft-skill signals + solid scores, or exceptional upward trajectory compensating for weaker scores
+- **B**: adequate soft-skill signals + decent scores, or strong scores but soft-skills unclear
+- **C**: absent soft-skill signals, unrecovered decline, or multiple red flags
 
-### Key differences between the two agents
+School quality is a threshold check, not a ranking tool. A candidate excelling at a lesser-known school can equal or exceed a mediocre candidate from a top-25 school.
+
+#### Key differences between the two agents
 
 | Dimension | Dr. Pyatetsky | Dr. Mirza |
 |-----------|---------------|-----------|
 | Framework | Workhorse / Superstar / Not Qualified | Holistic person assessment |
 | Primary signal | Consistent performance + research output | Teamwork, empathy, compassion |
 | School quality | Threshold (Top 25 = baseline cleared) | Compensatory (excelling at any school counts) |
-| Letters | Level of praise (outstanding / strong / lukewarm) | Specific soft-skill mentions + corroboration |
+| Letters | Level of praise | Specific soft-skill mentions + corroboration across writers |
 | Trajectory | Declining = red flag; recovery = resilience | Same, plus burst-then-absent pattern |
-| Filter logic | Zeros in multiple dimensions → filter out | Absence of all soft-skill signals → filter out |
-| Output focus | Numeric scores + classification + committee note | Soft-skill ratings + character impression + gut reaction |
+| Filter logic | Zeros in multiple dimensions | Absence of all soft-skill signals |
 
 ### Run on Quest
 
 ```bash
 # Upload files (from local machine)
-scp agents.py uam1146@quest.northwestern.edu:~/resume_screening/
+scp pipeline.py uam1146@quest.northwestern.edu:~/resume_screening/
 scp "Applicant_Name.txt" uam1146@quest.northwestern.edu:~/resume_screening/
 
-# On Quest: update RESUME_PATH, switch run script to agents.py, submit
-sed -i 's/RESUME_PATH = .*/RESUME_PATH = "Applicant_Name.txt"/' agents.py
-sed -i 's/screen.py/agents.py/g' run_ollama.sh
+# On Quest: update RESUME_PATH, switch run script, submit
+sed -i 's/RESUME_PATH = .*/RESUME_PATH = "Applicant_Name.txt"/' pipeline.py
+sed -i 's/screen\.py\|agents\.py/pipeline.py/g' run_ollama.sh
 sbatch run_ollama.sh
 squeue -u uam1146
 ```
 
-Results appear in `logs_<jobid>.out`. The output prints a human-readable summary followed by the full JSON for both agents.
+Results appear in `logs_<jobid>.out`.
 
 ### Interpreting the output
 
-- **Agreement:** if both agents give the same recommendation (A / B / C), the case is straightforward.
-- **Conflict:** if the agents disagree, the case is flagged for human review. A common pattern is Pyatetsky recommending C (weak rubric scores) while Mirza recommends B (strong soft-skill signals not captured by the rubric).
-- **filter_out:** if either agent sets `filter_out: true`, the applicant is flagged for exclusion. Both filter flags and the conflict note appear in the summary block at the top of the output.
-- **rubric_blind_spots** (Mirza output): qualities the numeric rubric does not capture. Review this field for candidates near the interview cutoff.
+The output prints a human-readable summary block followed by full JSON. Key fields to check:
+
+- **combined_score**: layer 1 numeric + layer 2 LLM total
+- **agreement**: whether both agents gave the same A/B/C — if false, flag for human review
+- **conflict_note**: filled when agents disagree, e.g. Pyatetsky=C (weak scores) vs Mirza=B (strong soft-skill signals not captured by rubric)
+- **either_filter_out**: true if either agent recommends filtering the applicant
+- **rubric_blind_spots** (Mirza output): qualities the numeric rubric does not capture — review for candidates near the interview cutoff
+
+### Known limitations
+
+- Layer 1 MSP scoring relies on LLM extraction of rotation grades; unusual transcript formats may produce extraction errors. Spot-check the `rotation_grades` field in JSON output.
+- Layer 2 SPE occasionally includes excluded role types (tutoring, scribing, interpreting) despite explicit exclusion rules. Spot-check `roles` in SPE output.
+- Layer 2 DT scores 0 when the personal statement does not make an explicit, specific resilience argument. Strong candidates who undersell their challenges will be underscored here.
+- Layer 3 A/B/C thresholds (combined score ≥ 28 for A, ≥ 20 for B, etc.) are initial calibration values and should be adjusted after reviewing results against faculty ground-truth scores.
+- All data stays local — no applicant text is sent to any external API.
 
 ### Adding a third agent (e.g., Dr. Fulbright)
 
 The agent pattern is modular. To add a new perspective:
 
-1. Define `FULBRIGHT_SYSTEM` and `FULBRIGHT_USER` strings following the same structure as the existing agents.
-2. Add a `run_fulbright()` function that calls `call_agent(FULBRIGHT_SYSTEM, FULBRIGHT_USER.format(resume_text=resume_text))`.
-3. Add the result to `run_both_agents()` and update the summary block.
-
-The only hard requirement is that the system prompt specifies JSON-only output matching the expected schema.
+1. Define `FULBRIGHT_EXTRACT_SYSTEM`, `FULBRIGHT_EXTRACT_USER`, `FULBRIGHT_JUDGE_SYSTEM`, `FULBRIGHT_JUDGE_USER` following the same structure as the existing agents.
+2. Add a `run_fulbright(resume_text, layer1, layer2)` function with the same two-step pattern.
+3. Call it in `__main__` alongside `run_pyatetsky` and `run_mirza`, and add its result to the final JSON output.
 
 ### Project layout (updated)
 
-- `screen.py` — step 2 LLM scoring (7 qualitative dimensions, Qwen3-32B)
-- `agents.py` — step 3 agent perspectives (Dr. Pyatetsky + Dr. Mirza)
+- `application_analyzer/` — step 1 PDF extraction and rule-based scoring
+- `pipeline.py` — steps 2 and 3: LLM scoring + agent evaluation (single integrated run)
 - `run_ollama.sh` — SLURM job script for Quest GPU nodes

@@ -48,118 +48,23 @@ def call_agent(system_prompt: str, user_content: str) -> dict:
 # ═════════════════════════════════════════════════════════════════════════════
 
 TOP25_MEDICAL = {
-    "harvard university",
-    "johns hopkins",
-    "university of pennsylvania",
-    "columbia university",
-    "duke university",
-    "stanford university",
-    "university of california san francisco",
-    "vanderbilt university",
-    "washington university in st louis",
-    "cornell university",
-    "new york university",
-    "yale university",
-    "mayo clinic school of medicine",
-    "northwestern university",
-    "university of michigan ann arbor",
-    "university of pittsburgh",
-    "university of washington",
-    "icahn school of medicine at mount sinai",
-    "university of california los angeles",
-    "university of chicago",
-    "university of california san diego",
-    "baylor college of medicine",
-    "emory university",
-    "university of texas southwestern medical center",
-    "case western reserve university",
+    "harvard", "johns hopkins", "ucsf", "stanford", "mayo clinic",
+    "university of pennsylvania", "columbia", "yale", "duke", "vanderbilt",
+    "university of chicago", "washington university", "cornell", "michigan",
+    "northwestern", "emory", "pittsburgh", "usc", "ucsd", "ucla",
+    "new york university", "mount sinai", "baylor", "tufts", "dartmouth",
 }
 
 TOP25_UNDERGRAD = {
-    # Research universities
-    "princeton university",
-    "massachusetts institute of technology",
-    "mit",
-    "harvard university",
-    "stanford university",
-    "yale university",
-    "university of chicago",
-    "duke university",
-    "johns hopkins university",
-    "northwestern university",
-    "university of pennsylvania",
-    "california institute of technology",
-    "caltech",
-    "cornell university",
-    "brown university",
-    "dartmouth college",
-    "columbia university",
-    "university of california berkeley",
-    "uc berkeley",
-    "rice university",
-    "university of california los angeles",
-    "ucla",
-    "vanderbilt university",
-    "carnegie mellon university",
-    "university of michigan ann arbor",
-    "university of notre dame",
-    "washington university in st louis",
-    "emory university",
-    "georgetown university",
-
-    # Liberal arts colleges
-    "williams college",
-    "amherst college",
-    "swarthmore college",
-    "bowdoin college",
-    "claremont mckenna college",
-    "pomona college",
-    "wellesley college",
-    "carleton college",
-    "harvey mudd college",
-    "barnard college",
-    "davidson college",
-    "grinnell college",
-    "hamilton college",
-    "middlebury college",
-    "smith college",
-    "vassar college",
-    "wesleyan university",
-    "washington and lee university",
-    "colgate university",
-    "university of richmond",
-    "bates college",
-    "colby college",
-    "haverford college",
+    "mit", "harvard", "stanford", "princeton", "yale", "columbia",
+    "university of chicago", "university of pennsylvania", "duke", "northwestern",
+    "dartmouth", "brown", "vanderbilt", "rice", "notre dame", "cornell",
+    "johns hopkins", "georgetown", "emory", "carnegie mellon",
+    "uc berkeley", "ucla", "university of michigan", "university of virginia",
+    "wake forest",
 }
 
-PROMPT_L1_EXTRACT = """Read this medical residency application. Extract ONLY the following facts. Do not score anything.
 
-1. medical_school: Full name of the applicant's medical school
-2. undergraduate_institution: Full name of the applicant's undergraduate institution
-3. undergraduate_gpa: Cumulative undergraduate GPA as a decimal (null if not found)
-4. usmle_step1_passed: Did the applicant pass USMLE Step 1? (true/false/null)
-5. usmle_step1_first_attempt: Was it passed on the FIRST attempt? (true/false/null)
-6. transcript_grading_system: Grading system used for clinical years.
-   Options: "H/HP/P/F", "A-F", "P/F_only", "mixed", "unknown"
-7. clinical_rotation_grades: Grades for the five core clinical rotations only
-   (Internal Medicine, Surgery, Pediatrics, OB/GYN, Neurology).
-   Use the school's own grade labels exactly as written.
-   Only include rotations explicitly listed in the transcript.
-
-Resume:
-{resume_text}
-
-Output JSON only:
-{{
-  "medical_school": "<string or null>",
-  "undergraduate_institution": "<string or null>",
-  "undergraduate_gpa": <float or null>,
-  "usmle_step1_passed": <true/false/null>,
-  "usmle_step1_first_attempt": <true/false/null>,
-  "transcript_grading_system": "<string>",
-  "clinical_rotation_grades": {{"Internal Medicine": "<grade>", "Surgery": "<grade>"}}
-}}"""
 
 HONOR_TOKENS = {"h", "honors", "honor"}
 HP_TOKENS    = {"hp", "high pass", "highpass", "com", "ccd"}
@@ -190,21 +95,125 @@ def _score_msp(grades, grading_system):
     return 1
 
 
-def run_layer1(resume_text):
-    """Layer 1: LLM extracts raw data, Python computes scores."""
-    print("  [Layer 1] Extracting facts for Python scoring...")
-    raw = call_model(PROMPT_L1_EXTRACT, resume_text)
+def _extract_l1_facts(text):
+    """Pure regex extraction of Layer 1 fields. No LLM."""
+    import re
 
-    med_school  = raw.get("medical_school")
-    undergrad   = raw.get("undergraduate_institution")
-    gpa         = raw.get("undergraduate_gpa")
-    step1_pass  = raw.get("usmle_step1_passed")
-    step1_first = raw.get("usmle_step1_first_attempt")
-    grading_sys = raw.get("transcript_grading_system", "unknown")
-    rot_grades  = raw.get("clinical_rotation_grades", {})
+    # Medical school
+    med_school = None
+    for pat in [
+        r"(?:Medical Education|Medical School|School of Medicine)[:\s]*\n?\s*([A-Z][^\n]{5,80})",
+        r"((?:University|College|School|Institute|Mayo Clinic)[^\n]{5,70}(?:School of Medicine|Medical School|Medicine))",
+    ]:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            med_school = m.group(1).strip().rstrip(",")
+            break
+
+    # Undergraduate
+    undergrad = None
+    for pat in [
+        r"(?:Undergraduate Education|Undergraduate Institution|Bachelor)[:\s]*\n?\s*([A-Z][^\n]{5,80})",
+        r"(?:B\.?S\.?|B\.?A\.?|Bachelor)[^\n]*\n\s*([A-Z][^\n]{5,70}(?:University|College|Institute))",
+    ]:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            undergrad = m.group(1).strip().rstrip(",")
+            break
+
+    # GPA
+    gpa = None
+    for pat in [
+        r"(?:Cumulative GPA|Overall GPA|GPA)[:\s]+([0-9]\.[0-9]{1,3})",
+        r"([0-9]\.[0-9]{1,3})\s*/\s*4\.0",
+        r"GPA[:\s]+([0-9]\.[0-9]{2})",
+    ]:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            try:
+                val = float(m.group(1))
+                if 0.0 < val <= 4.0:
+                    gpa = round(val, 2)
+                    break
+            except ValueError:
+                pass
+
+    # USMLE Step 1
+    step1_pass = None
+    step1_first = None
+    usmle_m = re.search(r"USMLE Step 1[^\n]*\n((?:[^\n]+\n){0,6})", text, re.IGNORECASE)
+    if usmle_m:
+        block = usmle_m.group(0).lower()
+        if "pass" in block:
+            step1_pass = True
+            step1_first = "fail" not in block.split("pass")[0]
+        elif "fail" in block:
+            step1_pass = False
+            step1_first = False
+    if step1_pass is None:
+        m = re.search(r"step\s*1[^\n]{0,40}(pass|fail)", text, re.IGNORECASE)
+        if m:
+            step1_pass = m.group(1).lower() == "pass"
+            step1_first = True
+
+    # Clinical rotation grades
+    CORE_ROTATIONS = {
+        "Internal Medicine": r"internal\s+medicine",
+        "Surgery":           r"(?:general\s+)?surgery",
+        "Pediatrics":        r"pediatrics?",
+        "OB/GYN":            r"ob/?gyn|obstetrics|gynecology",
+        "Neurology":         r"neurology",
+    }
+    GRADE_PAT = r"(honors?|high\s+pass|h/p|hp|pass|fail|p/f|[ABCDF]|com|ccd|s\b|u\b|lp)"
+    rot_grades = {}
+    for label, rot_pat in CORE_ROTATIONS.items():
+        m = re.search(rot_pat + r"[^\n]{0,60}" + GRADE_PAT, text, re.IGNORECASE)
+        if m:
+            rot_grades[label] = m.group(m.lastindex).strip()
+
+    # Infer grading system
+    grading_sys = "unknown"
+    if rot_grades:
+        vals = [v.lower() for v in rot_grades.values()]
+        has_honor = any(v in {"h", "honors", "honor"} for v in vals)
+        has_hp    = any(v in {"hp", "high pass"} for v in vals)
+        has_letter = any(re.match(r"^[a-f]$", v) for v in vals)
+        has_pf    = any(v in {"p", "pass", "f", "fail"} for v in vals)
+        if has_honor or has_hp:
+            grading_sys = "H/HP/P/F"
+        elif has_letter:
+            grading_sys = "A-F"
+        elif has_pf:
+            grading_sys = "P/F_only"
+        else:
+            grading_sys = "mixed"
+
+    return {
+        "medical_school": med_school,
+        "undergraduate_institution": undergrad,
+        "undergraduate_gpa": gpa,
+        "usmle_step1_passed": step1_pass,
+        "usmle_step1_first_attempt": step1_first,
+        "transcript_grading_system": grading_sys,
+        "clinical_rotation_grades": rot_grades,
+    }
+
+
+def run_layer1(resume_text):
+    """Layer 1: pure regex extraction — no LLM. Python computes all scores."""
+    print("  [Layer 1] Extracting facts with regex (no LLM)...")
+    raw = _extract_l1_facts(resume_text)
+
+    med_school  = raw["medical_school"]
+    undergrad   = raw["undergraduate_institution"]
+    gpa         = raw["undergraduate_gpa"]
+    step1_pass  = raw["usmle_step1_passed"]
+    step1_first = raw["usmle_step1_first_attempt"]
+    grading_sys = raw["transcript_grading_system"]
+    rot_grades  = raw["clinical_rotation_grades"]
 
     msq = 4 if _is_top_school(med_school, TOP25_MEDICAL) else 0
-    uq  = 2 if _is_top_school(undergrad, TOP25_UNDERGRAD) else 0
+    uq  = 2 if _is_top_school(undergrad,  TOP25_UNDERGRAD) else 0
 
     if gpa is None:      up = None
     elif gpa >= 3.8:     up = 4
@@ -226,6 +235,7 @@ def run_layer1(resume_text):
         "UP":    {"score": up,   "gpa": gpa},
         "USMLE": {"score": usmle, "passed": step1_pass, "first_attempt": step1_first},
     }
+
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -261,20 +271,33 @@ Output JSON only:
 
 PROMPT_SPO = """Read this medical residency application. Extract ONLY facts. Do not score.
 
-Count:
-1. Lead/first-author publications in peer-reviewed journals
-2. Non-first-author publications in peer-reviewed journals
-3. Oral presentations at national/international conferences like ARVO
-4. Poster presentations at national conferences
-5. List any high-impact ophthalmology journal names found
+Count the following. Apply these rules strictly:
 
-Only count items explicitly listed. Do not infer.
+RULES FOR ALL PUBLICATIONS:
+- ONLY count publications that are explicitly marked as PUBLISHED or IN PRESS.
+- EXCLUDE anything described as: submitted, under review, in preparation, in progress, pending, or similar.
+- A publication counts as first-author ONLY if the applicant is listed as the FIRST name in the author list.
+  "Co-first author" counts as first author only if explicitly stated.
+  Second author, third author, last author, or any other position = NOT first author.
+
+1. First-author publications: applicant is first author AND paper is published or in press in a peer-reviewed journal.
+   DO NOT count submitted or under review papers even if the applicant is first author.
+
+2. Non-first-author publications: applicant is NOT first author AND paper is published or in press in a peer-reviewed journal.
+   DO NOT count submitted or under review papers.
+
+3. Oral presentations at national/international conferences (e.g. ARVO, AAO). Count only.
+
+4. Poster presentations at national conferences. Count only.
+
+5. List the names of any peer-reviewed journals where published papers appear.
+   Flag any high-impact ophthalmology journals (e.g. Ophthalmology, JAMA Ophthalmology, IOVS, American Journal of Ophthalmology).
 
 Resume:
 {resume_text}
 
 Output JSON only:
-{{"first_author_pubs": <int>, "non_first_author_pubs": <int>, "oral_presentations": <int>, "poster_presentations": <int>, "high_impact_journals": [<list>]}}"""
+{{"first_author_pubs": <int>, "non_first_author_pubs": <int>, "oral_presentations": <int>, "poster_presentations": <int>, "high_impact_journals": [<list of journal names>], "excluded_submitted": <int>}}"""
 
 PROMPT_PLE = """Read this medical residency application. Answer ONE question only.
 
@@ -409,19 +432,21 @@ def score_spe(resume_text):
 
 def score_spo(resume_text):
     f = call_model(PROMPT_SPO, resume_text)
-    fa     = f.get("first_author_pubs", 0)
-    nfa    = f.get("non_first_author_pubs", 0)
-    oral   = f.get("oral_presentations", 0)
-    poster = f.get("poster_presentations", 0)
+    fa       = f.get("first_author_pubs", 0)
+    nfa      = f.get("non_first_author_pubs", 0)
+    oral     = f.get("oral_presentations", 0)
+    poster   = f.get("poster_presentations", 0)
     journals = f.get("high_impact_journals", [])
-    if fa >= 5:             score = 4
-    elif fa >= 3:           score = 3
-    elif fa >= 1:           score = 2
+    excluded = f.get("excluded_submitted", 0)
+    if fa >= 5:                 score = 4
+    elif fa >= 3:               score = 3
+    elif fa >= 1:               score = 2
     elif nfa >= 1 or oral >= 1: score = 1
-    elif poster >= 1:       score = 0.5
-    else:                   score = 0
+    elif poster >= 1:           score = 0.5
+    else:                       score = 0
     return {"score": score, "first_author": fa, "non_first_author": nfa,
-            "oral": oral, "poster": poster, "high_impact_journals": journals}
+            "oral": oral, "poster": poster, "high_impact_journals": journals,
+            "excluded_submitted": excluded}
 
 
 def score_ple(resume_text):

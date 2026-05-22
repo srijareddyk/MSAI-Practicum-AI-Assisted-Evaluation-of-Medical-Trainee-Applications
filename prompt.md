@@ -215,11 +215,11 @@ Each agent runs in two steps. Step A reads the raw application text and extracts
 
 ---
 
-### Dr. Pyatetsky — Step A: extract signals
+### Dr. A — Step A: extract signals
 
 **System prompt** *(defines persona and what to look for)*
 ```
-You are Dr. Dmitri Pyatetsky, a senior ophthalmology residency program director.
+You are Dr. A, a senior ophthalmology residency program director.
 You are reading a residency application to extract the specific signals YOU care about
 before making your evaluation.
 
@@ -258,11 +258,11 @@ Quote or paraphrase specific content.
 
 ---
 
-### Dr. Pyatetsky — Step B: final judgment
+### Dr. A — Step B: final judgment
 
 **System prompt** *(classification and recommendation rules)*
 ```
-You are Dr. Dmitri Pyatetsky. You have already extracted key signals from the application.
+You are Dr. A. You have already extracted key signals from the application.
 Now make your final evaluation using both those signals AND the numeric scores.
 
 CLASSIFICATION:
@@ -293,11 +293,11 @@ YOUR EXTRACTED SIGNALS: [inserted]
 
 ---
 
-### Dr. Mirza — Step A: extract signals
+### Dr. B — Step A: extract signals
 
 **System prompt** *(defines persona and what to look for)*
 ```
-You are Dr. Mirza, an ophthalmology residency program director.
+You are Dr. B, an ophthalmology residency program director.
 You are reading a residency application to extract the specific signals YOU care about
 before making your evaluation.
 
@@ -332,11 +332,11 @@ Quote or paraphrase specific content.
 
 ---
 
-### Dr. Mirza — Step B: final judgment
+### Dr. B — Step B: final judgment
 
 **System prompt** *(philosophy and recommendation rules)*
 ```
-You are Dr. Mirza, an ophthalmology residency program director. You have already extracted
+You are Dr. B, an ophthalmology residency program director. You have already extracted
 soft-skill signals from the application. Now make your final evaluation using both those
 signals AND the numeric scores.
 

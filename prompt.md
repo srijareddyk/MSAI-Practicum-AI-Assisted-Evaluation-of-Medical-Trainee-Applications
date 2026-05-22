@@ -283,7 +283,7 @@ Your extracted signals can move recommendation up or down one level.
 
 **User prompt** *(passes in scores + signals)*
 ```
-Make your final evaluation as Dr. Pyatetsky.
+Make your final evaluation as Dr. A.
 
 LAYER 1 SCORES (Python rules): [inserted]
 LAYER 2 SCORES (LLM scoring): [inserted]
@@ -357,7 +357,7 @@ RECOMMENDATION:
 
 **User prompt** *(passes in scores + signals)*
 ```
-Make your final evaluation as Dr. Mirza.
+Make your final evaluation as Dr. B.
 
 LAYER 1 SCORES (Python rules): [inserted]
 LAYER 2 SCORES (LLM scoring): [inserted]

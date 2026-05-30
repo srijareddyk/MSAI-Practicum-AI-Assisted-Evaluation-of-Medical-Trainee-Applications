@@ -1,4 +1,4 @@
-"""Command-line entry for step-1 PDF processing."""
+
 
 from __future__ import annotations
 
@@ -20,8 +20,8 @@ def _project_root() -> Path:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=(
-            "Step 1: Extract quantifiable rubric fields from ERAS-style PDFs and "
-            "write Excel worksheets matching the screening template."
+            "Step 1 only (no LLM): extract quantifiable rubric fields from ERAS PDFs "
+            "and write Excel worksheets with Doc A / Doc B score columns."
         )
     )
     p.add_argument(

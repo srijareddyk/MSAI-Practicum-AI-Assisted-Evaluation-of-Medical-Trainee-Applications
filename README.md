@@ -1,156 +1,108 @@
-# MSAI Practicum: AI-Assisted Evaluation of Medical Trainee Applications (Step 1)
+# MSAI Practicum: AI-Assisted Evaluation of Medical Trainee Applications
 
-This repository contains a Python pipeline for **step 1 rubric automation**. It reads ERAS-style application PDFs, extracts the five quantitative fields, and writes Excel worksheets that match the screening template.
+This repository processes ERAS-style ophthalmology residency applications in three stages:
 
-This step uses **rule-based parsing only** (no LLM). Outputs are **draft scores** for faculty review and must be validated before use.
+1. **Step 1 (Python rules, no LLM)** — objective rubric fields from PDF text
+2. **Factual briefing (1 LLM call)** — neutral extraction for reviewer agents
+3. **Doc A & Doc B agents (2 LLM calls)** — independent AI screeners with separate prompts
 
-## Rubric fields (step 1)
+All LLM inference runs **locally via Ollama** — no applicant data is sent to cloud APIs.
 
-| Field | Worksheet rows | Output |
+## Where the prompts live
+
+| Agent | File | Constant |
+|-------|------|----------|
+| Factual briefing | `llm_score/prompts.py` | `BRIEF_PROMPT` |
+| Doc A (research-oriented reviewer) | `llm_score/prompts.py` | `DOC_A_PROMPT` |
+| Doc B (clinical/leadership-oriented reviewer) | `llm_score/prompts.py` | `DOC_B_PROMPT` |
+
+Implementation: `llm_score/brief.py`, `llm_score/reviewers.py`, shared Ollama client in `llm_score/llm_client.py`.
+
+## Rubric fields — step 1 (automated)
+
+| Field | Worksheet row | Output |
 |--------|----------------|--------|
-| Medical School Quality | Top 25 vs otherwise | `4` or `0` |
-| Medical School Performance | Honors / High Pass / Pass / P-F-only per rubric | `4`, `3`, `2`, `1`, `0`, or `2.25` |
-| Undergraduate Quality | Top 25 vs otherwise | `2` or `0` |
-| Undergraduate Performance | GPA bands | `4`–`0` |
-| USMLE Step 1 | Passed first attempt vs not | `P` or `F` |
+| Medical School Quality | 14 | `4` or `0` |
+| Medical School Performance | 15 | `4`, `3`, `2`, `1`, `0`, or `2.25` |
+| Undergraduate Quality | 16 | `2` or `0` |
+| Undergraduate Performance | 17 | `4`–`0` |
+| USMLE Step 1 | 18 | `P` or `F` |
 
-School lists are **configurable YAML** in `application_analyzer/config/school_lists.yaml`. Replace the placeholder Top 25 entries with your official lists.
+Python rule scores pre-fill **both** Doc A (column D) and Doc B (column E), purple highlight.
 
-The rubric’s **2.25** P/F-only medical school rule is **not** inferred from generic PDF text (that caused false positives). Optionally add substrings under `pass_fail_only_medical_school_keywords` for schools where your committee always applies that rule.
+## Rubric fields — Doc A & Doc B agents (rows 5–12)
 
-## Privacy and data handling (important)
+Each agent independently scores subjective rows and writes to its Excel column:
 
-- These PDFs contain **identifying education and test information**. Store them on **encrypted drives**, limit access to reviewers, and follow your institution’s **FERPA/HIPAA** policies.
-- The tool writes **Excel summaries**; treat outputs like source PDFs. Do not commit real applicant PDFs or filled rubrics to public repositories.
-- Logs: use `--json` for structured extraction details; redirect to a secure location if needed.
-- This repo includes a `.gitignore` that excludes `applications/`, `rubric/`, PDFs, and generated XLSX output files by default.
+| Column | Agent | Prompt |
+|--------|-------|--------|
+| D | Doc A | `DOC_A_PROMPT` — research/publications/letters focus |
+| E | Doc B | `DOC_B_PROMPT` — leadership/service/resilience focus |
+
+Agent scores use a blue highlight. Each agent also produces a Markdown review (`*_doc_a.md`, `*_doc_b.md`).
+
+## Privacy and data handling
+
+- PDFs contain identifying education and test information. Store on encrypted drives and follow institutional FERPA/HIPAA policies.
+- Do not commit real applicant PDFs, filled rubrics, or briefings to public repositories.
 
 ## Setup
 
-Requires Python 3.10+.
+Requires Python 3.10+ and [Ollama](https://ollama.com/) with your chosen model pulled locally (default: `qwen3:14b`).
 
 ```bash
-cd /path/to/MSAI-Practicum-AI-Assisted-Evaluation-of-Medical-Trainee-Applications
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+ollama pull qwen3:14b
 ```
 
-## Input files expected locally
-
-To run the pipeline, your local workspace should contain:
-
-- `applications/` with applicant PDF files (not tracked in git)
-- `rubric/` with the screening workbook template (not tracked in git)
-
-These are intentionally ignored by git for privacy.
-
-## Run
-
-**One applicant:**
+## Run — full pipeline
 
 ```bash
-python -m application_analyzer.cli path/to/Application.pdf \
-  --template path/to/rubric_template.xlsx \
-  -o output/step1_one_applicant.xlsx
+python -m llm_score.cli applications/*.pdf \
+  --template rubric/template.xlsx \
+  -o output/screening_scores.xlsx
 ```
 
-**Batch (multiple PDFs → one workbook, one sheet per applicant):**
+Outputs per applicant in `output/briefings/`:
 
-```bash
-python -m application_analyzer.cli applications/*.pdf \
-  -o output/step1_batch.xlsx
-```
+- `{Applicant}_brief.md` — factual extraction (no scores)
+- `{Applicant}_doc_a.md` — Doc A summary + scores + rationale
+- `{Applicant}_doc_b.md` — Doc B summary + scores + rationale
 
 **Options:**
 
 | Flag | Meaning |
 |------|---------|
-| `-o` / `--output` | Output `.xlsx` path |
-| `--template` | Path to the screening Excel template (defaults to `rubric/template.xlsx` if present) |
-| `--school-list` | Custom YAML with `medical_school_top25` and `undergraduate_top25` |
-| `--json` | Print extraction/scoring details as JSON (for QA) |
-| `--keep-template-sheets` | Keep original template worksheets in the output file (debugging) |
+| `--skip-llm` | Step-1 Excel only (0 model calls) |
+| `--skip-agents` | Briefing only (1 model call); skip Doc A / Doc B |
+| `--model` | Ollama model name |
+| `--briefings-dir` | Markdown output directory |
+| `--json` | Print full JSON to stdout |
 
-By default, **original template sheets are removed** from the output workbook so the file only contains newly generated applicant tabs.
+## Model calls per applicant
 
-## Excel formatting behavior (current)
-
-- Only the **populated score cells** are highlighted in purple.
-- No other cells are recolored.
-- Populated purple cells:
-  - `D14:D18` (five rubric rows)
-  - `N8:R8` (summary band fields MSQ/MSP/UQ/UP/USMLE)
+| Command | Calls |
+|---------|-------|
+| `application_analyzer.cli` | **0** |
+| `llm_score.cli --skip-agents` | **1** (briefing) |
+| `llm_score.cli` (default) | **3** (briefing + Doc A + Doc B) |
 
 ## Project layout
 
-- `application_analyzer/pdf_extract.py` — PDF text extraction (`pypdf`)
-- `application_analyzer/text_normalize.py` — light cleanup for odd glyph duplication
-- `application_analyzer/facts.py` — regex heuristics for school names, GPA, USMLE Step 1
-- `application_analyzer/scoring.py` — rubric mapping (clerkship parsing for Medical School Performance)
-- `application_analyzer/excel_export.py` — copy template sheet, fill **only** the five score areas and the MSQ/MSP/UQ/UP/USMLE summary columns
-- `application_analyzer/config/school_lists.yaml` — Top 25 lists (replace with your official lists)
+```
+llm_score/
+  prompts.py          ← all LLM prompts (BRIEF, DOC_A, DOC_B)
+  llm_client.py       Ollama JSON helper
+  brief.py            factual extraction
+  reviewers.py        Doc A / Doc B agents
+  markdown_export.py  Markdown renderers
+  text_strip.py       boilerplate removal
+  cli.py              pipeline entry point
+application_analyzer/ step-1 Python rules + Excel export
+```
 
-## What to upload to GitHub
+## Limitations
 
-Commit and push:
-
-- `application_analyzer/`
-- `requirements.txt`
-- `README.md`
-- `.gitignore`
-
-Do **not** commit/push:
-
-- `applications/` (contains applicant data)
-- `rubric/` (contains reviewer/applicant data)
-- any `*.pdf` or `*.xlsx` outputs generated from real data
-- local environment files (`.venv/`, caches)
-
-## Limitations (step 1)
-
-- **Layout variance:** Different schools format transcripts differently. Clerkship lines may wrap oddly; the parser merges common Internal Medicine wraps but may miss rare formats.
-- **Medical School Performance:** Honors/High Pass detection depends on transcript wording (e.g., `H`, `COM`, `CCD`). Ambiguous cases need manual review.
-- **P/F-only schools (`2.25`):** Only applied when the applicant’s extracted medical school matches a substring you list in `pass_fail_only_medical_school_keywords` in the YAML config.
-- **USMLE Step 1:** Assumes ERAS-style examination blocks; nonstandard score reports may require manual entry.
-
-Later phases (narrative summaries, pool characterization, optional AI) can build on the same module boundaries.
-
-## Step 2: LLM-Based Scoring (In Progress)
-
-This step scores subjective rubric dimensions that require reading and understanding free-text content such as personal statements, research descriptions, and leadership activities.
-
-To protect applicant privacy, all LLM inference runs **locally** — no data is sent to external servers or cloud APIs.
-
-## Rubric fields tested (step 2)
-
-| Field | Scoring approach |
-|--------|-----------------|
-| Scientific Pursuits — Education/Experience | LLM extracts research roles and durations; Python calculates score |
-| Professional Leadership — Output | LLM classifies entrepreneurial/leadership activities; Python calculates score |
-
-Remaining dimensions are planned for subsequent iterations.
-
-## Key design principle (step 2)
-
-**The LLM extracts facts only. Python calculates the score.**
-
-This prevents the model from making subjective scoring decisions and ensures rules are applied consistently.
-
-## Models tested
-
-| Model | Hardware | Status |
-|-------|----------|--------|
-| Qwen3:14B | Mac M4 24GB, via Ollama | Tested — limited instruction-following on complex boundaries |
-| LLaMA 3.3:70B | Northwestern Quest HPC (A100 80GB), via vLLM | Testing in progress |
-
-## Scripts (in `llm_scoring/`)
-
-- `screen.py` — Qwen3:14B scoring via Ollama (local Mac/PC)
-
-## Limitations (step 2)
-
-- **Model instruction-following:** Smaller models (14B) struggle to apply complex boundary rules consistently. Larger models (70B) are being tested.
-- **Resume format variance:** PDFs converted to text may include school course descriptions mixed with personal content, requiring preprocessing to isolate the applicant's own activities.
-- **Subjective dimensions:** Some rubric criteria (e.g., Resilience, Endorsement quality) require human judgment and may not be fully automatable.
-
+- Agent scores are drafts for faculty validation — not final decisions.
+- Score quality depends on the local model and PDF text extraction.
+- Doc A and Doc B may disagree by design (independent reviewers).

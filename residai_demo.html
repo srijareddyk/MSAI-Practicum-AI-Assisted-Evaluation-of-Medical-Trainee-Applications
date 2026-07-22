@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResidAI — Residency Screening</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:#0D1B2A;--navy2:#162234;--navy3:#1E2F45;
+    --ice:#C8D8E8;--accent:#4A9EDB;--accent2:#2E7FBB;
+    --green:#2ECC8F;--amber:#F5A623;--red:#E85D5D;
+    --muted:#6B8299;--text:#E8F0F8;--text2:#A8C0D4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Outfit',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(74,158,219,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(74,158,219,.04) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+
+  header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:16px 40px;border-bottom:1px solid rgba(74,158,219,.15);background:rgba(13,27,42,.9);backdrop-filter:blur(12px);}
+  .logo{font-family:'DM Serif Display',serif;font-size:22px;color:var(--text);}
+  .logo span{color:var(--accent);}
+  .header-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+
+  .app{position:relative;z-index:1;display:flex;height:calc(100vh - 57px);}
+
+  /* Sidebar */
+  .sidebar{width:320px;min-width:320px;border-right:1px solid rgba(74,158,219,.1);overflow-y:auto;display:flex;flex-direction:column;}
+  .upload-zone{margin:20px 20px 0;border:2px dashed rgba(74,158,219,.25);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+  .upload-zone:hover{border-color:var(--accent);background:rgba(74,158,219,.04);}
+  .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+  .upload-icon{font-size:24px;margin-bottom:8px;}
+  .upload-text{font-size:13px;color:var(--text2);margin-bottom:4px;}
+  .upload-sub{font-size:11px;color:var(--muted);}
+  .uploaded-file{margin:10px 20px 0;background:rgba(74,158,219,.08);border:1px solid rgba(74,158,219,.2);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;}
+  .uploaded-file-name{font-size:12px;color:var(--text2);font-family:'DM Mono',monospace;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .remove-file{cursor:pointer;color:var(--muted);font-size:14px;}
+  .remove-file:hover{color:var(--red);}
+  .generate-btn{margin:14px 20px;background:var(--accent);color:white;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .2s;width:calc(100% - 40px);}
+  .generate-btn:hover{background:var(--accent2);}
+  .generate-btn:disabled{background:rgba(74,158,219,.3);cursor:not-allowed;}
+
+  .sidebar-divider{height:1px;background:rgba(74,158,219,.08);margin:4px 0;}
+  .sidebar-section-title{padding:12px 20px 6px;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+
+  /* Applicant cards */
+  .applicant-card{padding:12px 20px;cursor:pointer;transition:background .12s;border-left:3px solid transparent;}
+  .applicant-card:hover{background:rgba(74,158,219,.05);}
+  .applicant-card.active{background:rgba(74,158,219,.08);border-left-color:var(--accent);}
+  .applicant-card.conflict{border-left-color:var(--red);}
+  .applicant-card.conflict.active{background:rgba(232,93,93,.06);}
+  .card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .applicant-name{font-size:13px;font-weight:500;}
+  .applicant-school{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+  .rec-badge{font-size:10px;font-weight:600;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;}
+  .rec-a{background:rgba(46,204,143,.15);color:var(--green);}
+  .rec-b{background:rgba(245,166,35,.15);color:var(--amber);}
+  .rec-c{background:rgba(232,93,93,.15);color:var(--red);}
+  .conflict-tag{font-size:9px;color:var(--red);font-family:'DM Mono',monospace;letter-spacing:.06em;}
+
+  /* Detail panel */
+  .detail{flex:1;overflow-y:auto;padding:28px 36px;}
+  .empty-state{display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:10px;opacity:.3;}
+  .empty-state h2{font-family:'DM Serif Display',serif;font-size:20px;}
+  .empty-state p{font-size:12px;color:var(--muted);}
+
+  /* Processing overlay */
+  .processing{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;}
+  .spinner{width:40px;height:40px;border:3px solid rgba(74,158,219,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .processing-text{font-size:14px;color:var(--text2);}
+  .processing-log{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:left;width:380px;max-width:90%;height:120px;overflow:hidden;}
+  .log-line{padding:2px 0;animation:fadein .3s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  /* Detail content */
+  .detail-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid rgba(74,158,219,.1);}
+  .detail-name{font-family:'DM Serif Display',serif;font-size:26px;margin-bottom:4px;}
+  .detail-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+  .score-big{font-family:'DM Serif Display',serif;font-size:40px;color:var(--accent);line-height:1;}
+  .score-label{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;text-align:right;}
+  .section-title{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+  .section{margin-bottom:24px;}
+
+  /* Score grid */
+  .score-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:24px;}
+  .score-box{background:var(--navy2);border:1px solid rgba(74,158,219,.1);border-radius:8px;padding:12px;}
+  .score-box-label{font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+  .score-box-value{font-size:20px;font-family:'DM Serif Display',serif;color:var(--text);line-height:1;}
+  .score-box-max{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+  .score-bar{height:3px;background:rgba(74,158,219,.1);border-radius:2px;margin-top:8px;overflow:hidden;}
+  .score-bar-fill{height:100%;border-radius:2px;}
+  .high{background:var(--green);} .mid{background:var(--accent);} .low{background:var(--amber);}
+
+  /* Conflict alert */
+  .conflict-alert{background:rgba(232,93,93,.07);border:1px solid rgba(232,93,93,.3);border-radius:8px;padding:14px 16px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start;}
+  .conflict-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+  .conflict-text{font-size:12px;color:var(--text2);line-height:1.6;}
+  .conflict-text strong{color:var(--red);}
+
+  /* Doctor panels */
+  .doctors-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .doctor-panel{background:var(--navy2);border:1px solid rgba(74,158,219,.1);border-radius:10px;overflow:hidden;}
+  .doctor-header{padding:12px 16px;background:rgba(74,158,219,.06);border-bottom:1px solid rgba(74,158,219,.08);display:flex;justify-content:space-between;align-items:center;}
+  .doctor-name{font-size:13px;font-weight:600;}
+  .doctor-rec{font-family:'DM Mono',monospace;font-size:18px;}
+  .doctor-body{padding:14px 16px;}
+  .doctor-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(74,158,219,.05);font-size:11px;}
+  .doctor-row:last-child{border:none;}
+  .dr-label{color:var(--muted);}
+  .dr-val{color:var(--text2);font-family:'DM Mono',monospace;font-size:10px;}
+  .dr-val.pos{color:var(--green);} .dr-val.neg{color:var(--amber);}
+  .doctor-note{margin-top:10px;padding:8px 10px;background:rgba(74,158,219,.04);border-radius:6px;font-size:10px;color:var(--text2);line-height:1.6;font-style:italic;}
+
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(74,158,219,.2);border-radius:2px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Resid<span>AI</span></div>
+  <div class="header-meta">Northwestern · Ophthalmology Residency · 2025–26</div>
+</header>
+
+<div class="app">
+  <div class="sidebar">
+    <!-- Upload zone -->
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" accept=".pdf,.txt" multiple onchange="handleUpload(this)">
+      <div class="upload-icon">📄</div>
+      <div class="upload-text">Upload application(s)</div>
+      <div class="upload-sub">PDF or TXT · up to 5 files</div>
+    </div>
+    <div id="file-list"></div>
+    <button class="generate-btn" id="generate-btn" onclick="startGenerate()" disabled>Generate Scores</button>
+
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section-title">Applicants</div>
+    <div id="applicant-list"></div>
+  </div>
+
+  <div class="detail" id="detail-panel">
+    <div class="empty-state">
+      <h2>Upload an application</h2>
+      <p>Upload a PDF and click Generate Scores to begin</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEMO_DATA = [
+  {
+    id:1, name:"Applicant A", school:"Vanderbilt University SOM", combined:22.5,
+    rec_p:"A", rec_m:"A", classification:"SUPERSTAR", conflict:false,
+    l1:{MSQ:4,MSP:2.25,UQ:0,UP:4,USMLE:"P"},
+    l2:{SPE:0,SPO:2,PLE:0,PLO:2,SL:4,DT:1.5,ELW:4},
+    doc_a:{trajectory:"Upward",signal:"5 first-author publications in top journals",flags:"None",letters:"Top 5 in 27 years",note:"Dual superstar/workhorse profile. Transformative leadership with measurable impact. Top-tier candidate."},
+    doc_b:{teamwork:"Strong",empathy:"Strong",voice:"Genuine",skills:"Strong",note:"Embodies the kind of physician who will transform systems while providing humanistic care."}
+  },
+  {
+    id:2, name:"Applicant B", school:"Yale School of Medicine", combined:28.75,
+    rec_p:"A", rec_m:"A", classification:"SUPERSTAR", conflict:false,
+    l1:{MSQ:4,MSP:4,UQ:4,UP:4,USMLE:"P"},
+    l2:{SPE:4,SPO:2,PLE:0,PLO:0,SL:4,DT:1.5,ELW:4},
+    doc_a:{trajectory:"Upward",signal:"MD/PhD, president of student council",flags:"None",letters:"Highest recommendation",note:"Exceptional physician-scientist. Yale + MD/PhD + strong letters = top tier."},
+    doc_b:{teamwork:"Strong",empathy:"Adequate",voice:"Genuine",skills:"Strong",note:"Driven and intellectually curious. Clear commitment to building resilience through research."}
+  },
+  {
+    id:3, name:"Applicant C", school:"Icahn School of Medicine", combined:24.5,
+    rec_p:"A", rec_m:"B", classification:"WORKHORSE", conflict:true,
+    l1:{MSQ:4,MSP:3,UQ:0,UP:4,USMLE:"P"},
+    l2:{SPE:2,SPO:4,PLE:0,PLO:2,SL:2,DT:0,ELW:4},
+    doc_a:{trajectory:"Upward",signal:"8 first-author publications",flags:"None",letters:"Highest recommendation",note:"Outstanding research output combined with strong clinical performance. Recommend interview."},
+    doc_b:{teamwork:"Adequate",empathy:"Weak",voice:"Templated",skills:"Adequate",note:"Strong on paper but personal statement feels generic. Empathy signals are thin — patients as props."}
+  },
+  {
+    id:4, name:"Applicant D", school:"Medical Univ. of South Carolina", combined:16.5,
+    rec_p:"B", rec_m:"A", classification:"WORKHORSE", conflict:true,
+    l1:{MSQ:0,MSP:3,UQ:0,UP:4,USMLE:"P"},
+    l2:{SPE:0,SPO:4,PLE:0,PLO:0,SL:2,DT:3.5,ELW:4},
+    doc_a:{trajectory:"Flat",signal:"Strong publications but limited research experience",flags:"School not Top-25",letters:"Outstanding — multiple writers",note:"Strong letters and publications but combined score below A threshold. Recommend B."},
+    doc_b:{teamwork:"Strong",empathy:"Strong",voice:"Genuine",skills:"Strong",note:"Exceptional resilience signals. Type 1 diabetes since age 7 — shaped but not defined by it. Will connect deeply with patients."}
+  },
+  {
+    id:5, name:"Applicant E", school:"UIC College of Medicine", combined:17.0,
+    rec_p:"B", rec_m:"B", classification:"WORKHORSE", conflict:false,
+    l1:{MSQ:0,MSP:3,UQ:0,UP:4,USMLE:"P"},
+    l2:{SPE:2,SPO:3,PLE:0,PLO:0,SL:2,DT:0,ELW:3},
+    doc_a:{trajectory:"Upward",signal:"Solid across all dimensions",flags:"None",letters:"Strong, one exceptional",note:"Reliable candidate who would fit well in the program."},
+    doc_b:{teamwork:"Adequate",empathy:"Adequate",voice:"Genuine",skills:"Adequate",note:"Authentic voice and genuine interest in serving underserved communities. Solid B candidate."}
+  }
+];
+
+let uploadedFiles = [];
+let generatedApps = [];
+let currentId = null;
+
+function handleUpload(input) {
+  const files = Array.from(input.files);
+  uploadedFiles = files.slice(0,5);
+  renderFileList();
+  document.getElementById('generate-btn').disabled = uploadedFiles.length === 0;
+}
+
+function renderFileList() {
+  const el = document.getElementById('file-list');
+  el.innerHTML = uploadedFiles.map((f,i) => `
+    <div class="uploaded-file">
+      <span style="font-size:14px">📄</span>
+      <span class="uploaded-file-name">${f.name}</span>
+      <span class="remove-file" onclick="removeFile(${i})">✕</span>
+    </div>`).join('');
+}
+
+function removeFile(i) {
+  uploadedFiles.splice(i,1);
+  renderFileList();
+  document.getElementById('generate-btn').disabled = uploadedFiles.length === 0;
+}
+
+const LOG_LINES = [
+  "Loading model: qwen3:32b...",
+  "Layer 1: extracting objective scores...",
+  "  → School ranking matched",
+  "  → GPA extracted: 3.89",
+  "  → USMLE Step 1: PASS",
+  "  → Clinical rotation grades parsed",
+  "Layer 2: scoring qualitative dimensions...",
+  "  → Research experience: scoring...",
+  "  → Publications: counting first-author...",
+  "  → Leadership degree: checking...",
+  "  → Leadership output: 4-call chain...",
+  "  → Social leadership: classifying...",
+  "  → Resilience: analyzing essay...",
+  "  → Letter quality: evaluating endorsements...",
+  "Layer 3: running agent evaluation...",
+  "  → Doctor A: extracting signals...",
+  "  → Doctor A: making judgment...",
+  "  → Doctor B: extracting signals...",
+  "  → Doctor B: making judgment...",
+  "Agreement check: comparing recommendations...",
+  "✓ Pipeline complete."
+];
+
+function startGenerate() {
+  document.getElementById('generate-btn').disabled = true;
+  const detail = document.getElementById('detail-panel');
+  detail.innerHTML = `
+    <div class="processing">
+      <div class="spinner"></div>
+      <div class="processing-text">Analyzing application${uploadedFiles.length > 1 ? 's' : ''}...</div>
+      <div class="processing-log" id="proc-log"></div>
+    </div>`;
+
+  let lineIdx = 0;
+  const log = document.getElementById('proc-log');
+  const interval = setInterval(() => {
+    if (lineIdx < LOG_LINES.length) {
+      const div = document.createElement('div');
+      div.className = 'log-line';
+      div.textContent = LOG_LINES[lineIdx];
+      div.style.color = LOG_LINES[lineIdx].startsWith('✓') ? 'var(--green)' :
+                        LOG_LINES[lineIdx].startsWith('Layer') ? 'var(--accent)' : 'var(--muted)';
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+      lineIdx++;
+    } else {
+      clearInterval(interval);
+      // Use demo data for however many files uploaded
+      generatedApps = DEMO_DATA.slice(0, Math.min(uploadedFiles.length, DEMO_DATA.length));
+      renderSidebar();
+      showDetail(generatedApps[0].id);
+      document.getElementById('generate-btn').disabled = false;
+    }
+  }, 180);
+}
+
+function renderSidebar() {
+  const list = document.getElementById('applicant-list');
+  list.innerHTML = generatedApps.map(a => `
+    <div class="applicant-card ${a.conflict?'conflict':''} ${a.id===currentId?'active':''}" onclick="showDetail(${a.id})">
+      <div class="card-top">
+        <div class="applicant-name">${a.name}</div>
+        ${!a.conflict ? `<span class="rec-badge rec-${a.rec_p.toLowerCase()}">${a.rec_p}</span>` : `<span class="conflict-tag">⚑ Review</span>`}
+      </div>
+      <div class="applicant-school">${a.school}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace">Score: ${a.combined} &nbsp;·&nbsp; ${a.classification}</div>
+    </div>`).join('');
+}
+
+const L2_LABELS = {SPE:'Research Exp.',SPO:'Publications',PLE:'Leadership Deg.',PLO:'Leadership Out.',SL:'Social Leader.',DT:'Resilience',ELW:'Letter Quality'};
+const L2_MAX   = {SPE:4,SPO:4,PLE:2,PLO:4,SL:4,DT:4,ELW:4};
+const barCls = (v,mx) => (v/mx) >= .75 ? 'high' : (v/mx) >= .375 ? 'mid' : 'low';
+
+function showDetail(id) {
+  currentId = id;
+  renderSidebar();
+  const a = generatedApps.find(x=>x.id===id);
+  if (!a) return;
+  const l2total = Object.values(a.l2).reduce((s,v)=>s+v,0);
+
+  document.getElementById('detail-panel').innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-name">${a.name}</div>
+        <div class="detail-meta">${a.school} &nbsp;·&nbsp; ${a.classification} &nbsp;·&nbsp; USMLE: ${a.l1.USMLE}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="score-big">${a.combined}</div>
+        <div class="score-label">Combined score / 36</div>
+      </div>
+    </div>
+
+    ${a.conflict ? `
+    <div class="conflict-alert">
+      <div class="conflict-icon">⚑</div>
+      <div class="conflict-text"><strong>Human review required.</strong> Doctor A recommends <strong style="color:var(--amber)">${a.rec_p}</strong>, Doctor B recommends <strong style="color:var(--accent)">${a.rec_m}</strong>. The two perspectives disagree — a physician should review this case.</div>
+    </div>` : ''}
+
+    <div class="section">
+      <div class="section-title">Layer 1 — Objective scores</div>
+      <div class="score-grid">
+        ${['MSQ','MSP','UQ','UP'].map(k=>`
+          <div class="score-box">
+            <div class="score-box-label">${k}</div>
+            <div class="score-box-value">${a.l1[k]} <span class="score-box-max">/ ${k==='UQ'?2:4}</span></div>
+            <div class="score-bar"><div class="score-bar-fill ${barCls(a.l1[k],k==='UQ'?2:4)}" style="width:${(a.l1[k]/(k==='UQ'?2:4))*100}%"></div></div>
+          </div>`).join('')}
+        <div class="score-box">
+          <div class="score-box-label">USMLE</div>
+          <div class="score-box-value" style="font-size:16px;color:${a.l1.USMLE==='P'?'var(--green)':'var(--red)'}">${a.l1.USMLE}</div>
+          <div class="score-bar"><div class="score-bar-fill ${a.l1.USMLE==='P'?'high':'low'}" style="width:${a.l1.USMLE==='P'?100:0}%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Layer 2 — AI scoring &nbsp;<span style="color:var(--accent)">${l2total} / 26 pts</span></div>
+      <div class="score-grid">
+        ${Object.entries(a.l2).map(([k,v])=>`
+          <div class="score-box">
+            <div class="score-box-label">${L2_LABELS[k]}</div>
+            <div class="score-box-value">${v} <span class="score-box-max">/ ${L2_MAX[k]}</span></div>
+            <div class="score-bar"><div class="score-bar-fill ${barCls(v,L2_MAX[k])}" style="width:${(v/L2_MAX[k])*100}%"></div></div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Layer 3 — Physician agent perspectives</div>
+      <div class="doctors-grid">
+        <div class="doctor-panel">
+          <div class="doctor-header">
+            <div class="doctor-name">Doctor A &nbsp;<span style="font-size:10px;color:var(--muted)">Structured</span></div>
+            <div class="doctor-rec rec-${a.rec_p.toLowerCase()}">${a.rec_p}</div>
+          </div>
+          <div class="doctor-body">
+            <div class="doctor-row"><span class="dr-label">Trajectory</span><span class="dr-val ${a.doc_a.trajectory==='Upward'?'pos':''}">${a.doc_a.trajectory}</span></div>
+            <div class="doctor-row"><span class="dr-label">Key signal</span><span class="dr-val">${a.doc_a.signal}</span></div>
+            <div class="doctor-row"><span class="dr-label">Red flags</span><span class="dr-val ${a.doc_a.flags==='None'?'pos':'neg'}">${a.doc_a.flags}</span></div>
+            <div class="doctor-row"><span class="dr-label">Letters</span><span class="dr-val">${a.doc_a.letters}</span></div>
+            <div class="doctor-note">"${a.doc_a.note}"</div>
+          </div>
+        </div>
+        <div class="doctor-panel">
+          <div class="doctor-header">
+            <div class="doctor-name">Doctor B &nbsp;<span style="font-size:10px;color:var(--muted)">Holistic</span></div>
+            <div class="doctor-rec rec-${a.rec_m.toLowerCase()}">${a.rec_m}</div>
+          </div>
+          <div class="doctor-body">
+            <div class="doctor-row"><span class="dr-label">Teamwork</span><span class="dr-val ${a.doc_b.teamwork==='Strong'?'pos':'neg'}">${a.doc_b.teamwork}</span></div>
+            <div class="doctor-row"><span class="dr-label">Empathy</span><span class="dr-val ${a.doc_b.empathy==='Strong'?'pos':'neg'}">${a.doc_b.empathy}</span></div>
+            <div class="doctor-row"><span class="dr-label">Writing voice</span><span class="dr-val">${a.doc_b.voice}</span></div>
+            <div class="doctor-row"><span class="dr-label">Overall soft skills</span><span class="dr-val ${a.doc_b.skills==='Strong'?'pos':'neg'}">${a.doc_b.skills}</span></div>
+            <div class="doctor-note">"${a.doc_b.note}"</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Pre-load demo with some applicants visible for demo purposes
+window.onload = () => { renderSidebar(); };
+</script>
+</body>
+</html>

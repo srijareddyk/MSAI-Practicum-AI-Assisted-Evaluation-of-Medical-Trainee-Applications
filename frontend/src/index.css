@@ -1,0 +1,73 @@
+:root {
+  /* Northwestern University brand */
+  --nu-purple: #4e2a84;
+  --nu-purple-dark: #401f68;
+  --nu-purple-deep: #2b1748;
+  --nu-purple-mid: #836eaa;
+  --nu-purple-soft: #c7bdd8;
+  --nu-purple-wash: #ebe6f4;
+  --nu-ink: #1a1520;
+  --nu-slate: #4a4550;
+  --nu-muted: #716c6b;
+  --nu-line: #d9d4e0;
+  --nu-canvas: #f7f5fa;
+  --nu-white: #ffffff;
+  --nu-pass: #1f6b4a;
+  --nu-fail: #9b2c2c;
+  --nu-rec-a: #1f6b4a;
+  --nu-rec-b: #8a6d1b;
+  --nu-rec-c: #9b2c2c;
+
+  --font-display: 'Newsreader', 'Georgia', serif;
+  --font-body: 'Figtree', system-ui, sans-serif;
+
+  --shadow-soft: 0 18px 50px rgba(43, 23, 72, 0.12);
+  --radius: 14px;
+  --max: 1120px;
+
+  font-family: var(--font-body);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  color: var(--nu-ink);
+  background: var(--nu-canvas);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(78, 42, 132, 0.18), transparent 55%),
+    radial-gradient(900px 500px at 95% 0%, rgba(131, 110, 170, 0.16), transparent 50%),
+    linear-gradient(180deg, #f3eff8 0%, var(--nu-canvas) 38%, #faf9fc 100%);
+  background-attachment: fixed;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+a {
+  color: var(--nu-purple);
+}
+
+img {
+  max-width: 100%;
+}
+
+::selection {
+  background: rgba(78, 42, 132, 0.22);
+}

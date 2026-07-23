@@ -8,68 +8,71 @@ This repository processes ERAS-style ophthalmology residency applications in thr
 
 All LLM inference runs **locally via Ollama** — no applicant data is sent to cloud APIs.
 
-## Where the prompts live
+## Web UI
 
-| Agent | File | Constant |
-|-------|------|----------|
-| Factual briefing | `llm_score/prompts.py` | `BRIEF_PROMPT` |
-| Doc A (research-oriented reviewer) | `llm_score/prompts.py` | `DOC_A_PROMPT` |
-| Doc B (clinical/leadership-oriented reviewer) | `llm_score/prompts.py` | `DOC_B_PROMPT` |
+A Northwestern-branded frontend talks to a FastAPI backend that wraps the same pipeline as the CLI.
 
-Implementation: `llm_score/brief.py`, `llm_score/reviewers.py`, shared Ollama client in `llm_score/llm_client.py`.
+### Setup
 
-## Rubric fields — step 1 (automated)
-
-| Field | Worksheet row | Output |
-|--------|----------------|--------|
-| Medical School Quality | 14 | `4` or `0` |
-| Medical School Performance | 15 | `4`, `3`, `2`, `1`, `0`, or `2.25` |
-| Undergraduate Quality | 16 | `2` or `0` |
-| Undergraduate Performance | 17 | `4`–`0` |
-| USMLE Step 1 | 18 | `P` or `F` |
-
-Python rule scores pre-fill **both** Doc A (column D) and Doc B (column E), purple highlight.
-
-## Rubric fields — Doc A & Doc B agents (rows 5–12)
-
-Each agent independently scores subjective rows and writes to its Excel column:
-
-| Column | Agent | Prompt |
-|--------|-------|--------|
-| D | Doc A | `DOC_A_PROMPT` — research/publications/letters focus |
-| E | Doc B | `DOC_B_PROMPT` — leadership/service/resilience focus |
-
-Agent scores use a blue highlight. Each agent also produces a Markdown review (`*_doc_a.md`, `*_doc_b.md`).
-
-## Privacy and data handling
-
-- PDFs contain identifying education and test information. Store on encrypted drives and follow institutional FERPA/HIPAA policies.
-- Do not commit real applicant PDFs, filled rubrics, or briefings to public repositories.
-
-## Setup
-
-Requires Python 3.10+ and [Ollama](https://ollama.com/) with your chosen model pulled locally (default: `qwen3:14b`).
+Requires Python 3.10+, Node.js 18+, and [Ollama](https://ollama.com/) with your chosen model pulled locally (default: `qwen3:14b`).
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ollama pull qwen3:14b
+
+cd frontend && npm install && cd ..
 ```
 
-## Run — full pipeline
+### Run (development)
+
+Two terminals:
 
 ```bash
+# Terminal 1 — API
+source .venv/bin/activate
+python -m uvicorn api.server:app --reload --host 127.0.0.1 --port 8000
+
+# Terminal 2 — UI (proxies /api → :8000)
+cd frontend && npm run dev
+```
+
+Or use the helper script:
+
+```bash
+source .venv/bin/activate
+./scripts/dev.sh
+```
+
+Open **http://127.0.0.1:5173**
+
+### Run (production-style)
+
+```bash
+cd frontend && npm run build && cd ..
+source .venv/bin/activate
+python -m uvicorn api.server:app --host 127.0.0.1 --port 8000
+```
+
+Open **http://127.0.0.1:8000** (API serves the built UI).
+
+### UI features
+
+- Upload one or more ERAS PDFs
+- Pipeline modes: Full (3 LLM calls), Briefing only, Step 1 only
+- Progress while local models run
+- Side-by-side Doc A / Doc B scores and rationales
+- Download Excel workbook and Markdown artifacts
+
+## CLI (unchanged)
+
+```bash
+source .venv/bin/activate
 python -m llm_score.cli applications/*.pdf \
   --template rubric/template.xlsx \
   -o output/screening_scores.xlsx
 ```
-
-Outputs per applicant in `output/briefings/`:
-
-- `{Applicant}_brief.md` — factual extraction (no scores)
-- `{Applicant}_doc_a.md` — Doc A summary + scores + rationale
-- `{Applicant}_doc_b.md` — Doc B summary + scores + rationale
-
-**Options:**
 
 | Flag | Meaning |
 |------|---------|
@@ -79,26 +82,28 @@ Outputs per applicant in `output/briefings/`:
 | `--briefings-dir` | Markdown output directory |
 | `--json` | Print full JSON to stdout |
 
-## Model calls per applicant
+## Where the prompts live
 
-| Command | Calls |
-|---------|-------|
-| `application_analyzer.cli` | **0** |
-| `llm_score.cli --skip-agents` | **1** (briefing) |
-| `llm_score.cli` (default) | **3** (briefing + Doc A + Doc B) |
+| Agent | File | Constant |
+|-------|------|----------|
+| Factual briefing | `llm_score/prompts.py` | `BRIEF_PROMPT` |
+| Doc A (research-oriented reviewer) | `llm_score/prompts.py` | `DOC_A_PROMPT` |
+| Doc B (clinical/leadership-oriented reviewer) | `llm_score/prompts.py` | `DOC_B_PROMPT` |
+
+## Privacy and data handling
+
+- PDFs contain identifying education and test information. Store on encrypted drives and follow institutional FERPA/HIPAA policies.
+- Do not commit real applicant PDFs, filled rubrics, or briefings to public repositories.
+- Uploaded files for the web UI are stored under `api_data/` (gitignored).
 
 ## Project layout
 
 ```
-llm_score/
-  prompts.py          ← all LLM prompts (BRIEF, DOC_A, DOC_B)
-  llm_client.py       Ollama JSON helper
-  brief.py            factual extraction
-  reviewers.py        Doc A / Doc B agents
-  markdown_export.py  Markdown renderers
-  text_strip.py       boilerplate removal
-  cli.py              pipeline entry point
-application_analyzer/ step-1 Python rules + Excel export
+frontend/             Northwestern-branded React UI (Vite)
+api/                  FastAPI server + shared pipeline runner
+llm_score/            LLM briefing + Doc A / Doc B agents
+application_analyzer/ Step-1 Python rules + Excel export
+rubric/template.xlsx  Screening workbook template
 ```
 
 ## Limitations

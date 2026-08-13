@@ -1,20 +1,16 @@
-# MSAI Practicum: AI-Assisted Evaluation of Medical Trainee Applications (Step 1)
+# MSAI Practicum: AI-Assisted Evaluation of Medical Trainee Applications
 
-This repository contains a Python pipeline for **step 1 rubric automation**. It reads ERAS-style application PDFs, extracts the five quantitative fields, and writes Excel worksheets that match the screening template.
+This repository processes ERAS-style ophthalmology residency applications in three stages:
 
-This step uses **rule-based parsing only** (no LLM). Outputs are **draft scores** for faculty review and must be validated before use.
+1. **Step 1 (Python rules, no LLM)** — objective rubric fields from PDF text
+2. **Factual briefing (1 LLM call)** — neutral extraction for reviewer agents
+3. **Doc A & Doc B agents (2 LLM calls)** — independent AI screeners with separate prompts
 
-## Rubric fields (step 1)
+All LLM inference runs **locally via Ollama** — no applicant data is sent to cloud APIs.
 
-| Field | Worksheet rows | Output |
-|--------|----------------|--------|
-| Medical School Quality | Top 25 vs otherwise | `4` or `0` |
-| Medical School Performance | Honors / High Pass / Pass / P-F-only per rubric | `4`, `3`, `2`, `1`, `0`, or `2.25` |
-| Undergraduate Quality | Top 25 vs otherwise | `2` or `0` |
-| Undergraduate Performance | GPA bands | `4`–`0` |
-| USMLE Step 1 | Passed first attempt vs not | `P` or `F` |
+## Web UI
 
-School lists are **configurable YAML** in `application_analyzer/config/school_lists.yaml`. Replace the placeholder Top 25 entries with your official lists.
+A Northwestern-branded frontend talks to a FastAPI backend that wraps the same pipeline as the CLI.
 
 The rubric's **2.25** P/F-only medical school rule is **not** inferred from generic PDF text (that caused false positives). Optionally add substrings under `pass_fail_only_medical_school_keywords` for schools where your committee always applies that rule.
 
@@ -30,84 +26,94 @@ The rubric's **2.25** P/F-only medical school rule is **not** inferred from gene
 Requires Python 3.10+.
 
 ```bash
-cd /path/to/MSAI-Practicum-AI-Assisted-Evaluation-of-Medical-Trainee-Applications
 python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
+ollama pull qwen3:14b
+
+cd frontend && npm install && cd ..
 ```
 
-## Input files expected locally
+### Run (development)
 
-To run the pipeline, your local workspace should contain:
-
-- `applications/` with applicant PDF files (not tracked in git)
-- `rubric/` with the screening workbook template (not tracked in git)
-
-These are intentionally ignored by git for privacy.
-
-## Run
-
-**One applicant:**
+Two terminals:
 
 ```bash
-python -m application_analyzer.cli path/to/Application.pdf \
-  --template path/to/rubric_template.xlsx \
-  -o output/step1_one_applicant.xlsx
+# Terminal 1 — API
+source .venv/bin/activate
+python -m uvicorn api.server:app --reload --host 127.0.0.1 --port 8000
+
+# Terminal 2 — UI (proxies /api → :8000)
+cd frontend && npm run dev
 ```
 
-**Batch (multiple PDFs → one workbook, one sheet per applicant):**
+Or use the helper script:
 
 ```bash
-python -m application_analyzer.cli applications/*.pdf \
-  -o output/step1_batch.xlsx
+source .venv/bin/activate
+./scripts/dev.sh
 ```
 
-**Options:**
+Open **http://127.0.0.1:5173**
+
+### Run (production-style)
+
+```bash
+cd frontend && npm run build && cd ..
+source .venv/bin/activate
+python -m uvicorn api.server:app --host 127.0.0.1 --port 8000
+```
+
+Open **http://127.0.0.1:8000** (API serves the built UI).
+
+### UI features
+
+- Upload one or more ERAS PDFs
+- Pipeline modes: Full (3 LLM calls), Briefing only, Step 1 only
+- Progress while local models run
+- Side-by-side Doc A / Doc B scores and rationales
+- Download Excel workbook and Markdown artifacts
+
+## CLI (unchanged)
+
+```bash
+source .venv/bin/activate
+python -m llm_score.cli applications/*.pdf \
+  --template rubric/template.xlsx \
+  -o output/screening_scores.xlsx
+```
 
 | Flag | Meaning |
 |------|---------|
-| `-o` / `--output` | Output `.xlsx` path |
-| `--template` | Path to the screening Excel template (defaults to `rubric/template.xlsx` if present) |
-| `--school-list` | Custom YAML with `medical_school_top25` and `undergraduate_top25` |
-| `--json` | Print extraction/scoring details as JSON (for QA) |
-| `--keep-template-sheets` | Keep original template worksheets in the output file (debugging) |
+| `--skip-llm` | Step-1 Excel only (0 model calls) |
+| `--skip-agents` | Briefing only (1 model call); skip Doc A / Doc B |
+| `--model` | Ollama model name |
+| `--briefings-dir` | Markdown output directory |
+| `--json` | Print full JSON to stdout |
 
-By default, **original template sheets are removed** from the output workbook so the file only contains newly generated applicant tabs.
+## Where the prompts live
 
-## Excel formatting behavior (current)
+| Agent | File | Constant |
+|-------|------|----------|
+| Factual briefing | `llm_score/prompts.py` | `BRIEF_PROMPT` |
+| Doc A (research-oriented reviewer) | `llm_score/prompts.py` | `DOC_A_PROMPT` |
+| Doc B (clinical/leadership-oriented reviewer) | `llm_score/prompts.py` | `DOC_B_PROMPT` |
 
-- Only the **populated score cells** are highlighted in purple.
-- No other cells are recolored.
-- Populated purple cells:
-  - `D14:D18` (five rubric rows)
-  - `N8:R8` (summary band fields MSQ/MSP/UQ/UP/USMLE)
+## Privacy and data handling
+
+- PDFs contain identifying education and test information. Store on encrypted drives and follow institutional FERPA/HIPAA policies.
+- Do not commit real applicant PDFs, filled rubrics, or briefings to public repositories.
+- Uploaded files for the web UI are stored under `api_data/` (gitignored).
 
 ## Project layout
 
-- `application_analyzer/pdf_extract.py` — PDF text extraction (`pypdf`)
-- `application_analyzer/text_normalize.py` — light cleanup for odd glyph duplication
-- `application_analyzer/facts.py` — regex heuristics for school names, GPA, USMLE Step 1
-- `application_analyzer/scoring.py` — rubric mapping (clerkship parsing for Medical School Performance)
-- `application_analyzer/excel_export.py` — copy template sheet, fill **only** the five score areas and the MSQ/MSP/UQ/UP/USMLE summary columns
-- `application_analyzer/config/school_lists.yaml` — Top 25 lists (replace with your official lists)
-
-## What to upload to GitHub
-
-Commit and push:
-
-- `application_analyzer/`
-- `requirements.txt`
-- `README.md`
-- `.gitignore`
-
-Do **not** commit/push:
-
-- `applications/` (contains applicant data)
-- `rubric/` (contains reviewer/applicant data)
-- any `*.pdf` or `*.xlsx` outputs generated from real data
-- local environment files (`.venv/`, caches)
-
-## Limitations (step 1)
+```
+frontend/             Northwestern-branded React UI (Vite)
+api/                  FastAPI server + shared pipeline runner
+llm_score/            LLM briefing + Doc A / Doc B agents
+application_analyzer/ Step-1 Python rules + Excel export
+rubric/template.xlsx  Screening workbook template
+```
 
 - **Layout variance:** Different schools format transcripts differently. Clerkship lines may wrap oddly; the parser merges common Internal Medicine wraps but may miss rare formats.
 - **Medical School Performance:** Honors/High Pass detection depends on transcript wording (e.g., `H`, `COM`, `CCD`). Ambiguous cases need manual review.

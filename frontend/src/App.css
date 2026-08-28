@@ -809,3 +809,160 @@
   padding: 2rem 1rem;
   color: var(--nu-muted);
 }
+
+/* ==========================================================================
+   PDF export — the "Download PDF" button renders this report through the
+   browser's print pipeline, so these rules define the printed document.
+   ========================================================================== */
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0.55in 0.5in;
+  }
+
+  html,
+  body {
+    background: var(--nu-white) !important;
+  }
+
+  body {
+    font-size: 10pt;
+    color: var(--nu-ink);
+  }
+
+  /* Keep brand colors, badges and score chips readable in the PDF */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  /* Strip the app chrome down to a clean document */
+  .main {
+    padding: 0;
+    max-width: none;
+  }
+
+  .panel {
+    box-shadow: none;
+    border: 0;
+    border-radius: 0;
+    background: var(--nu-white);
+  }
+
+  .panel-section {
+    padding: 0;
+    border: 0;
+  }
+
+  .panel-section + .panel-section {
+    border-top: 0;
+  }
+
+  .print-letterhead {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 20pt;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--nu-purple);
+  }
+
+  .print-brand strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 13pt;
+    color: var(--nu-purple);
+  }
+
+  .print-brand span {
+    font-size: 8.5pt;
+    color: var(--nu-muted);
+  }
+
+  .print-stamp {
+    text-align: right;
+    font-size: 8pt;
+    color: var(--nu-muted);
+  }
+
+  .print-stamp span {
+    display: block;
+  }
+
+  .applicant-header {
+    margin-bottom: 1rem;
+  }
+
+  .applicant-header h2 {
+    font-size: 16pt;
+  }
+
+  /* Stack the dual reviews so rationale text stays legible on paper */
+  .compare {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .agent-col,
+  .briefing-block,
+  .notes {
+    background: var(--nu-white);
+    box-shadow: none;
+  }
+
+  .score-table th,
+  .score-table td {
+    font-size: 8.5pt;
+  }
+
+  /* Pagination: never split an atomic block or orphan a heading */
+  .fact,
+  .score-chip,
+  .brief-item,
+  .agent-head,
+  .agent-summary,
+  .score-table thead,
+  .score-table tr,
+  .notes {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  h2,
+  h3,
+  h4,
+  .section-title,
+  .section-sub {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .print-disclaimer {
+    margin-top: 0.6rem;
+    padding-top: 4pt;
+    border-top: 1px solid var(--nu-line);
+    font-size: 7pt;
+    line-height: 1.35;
+    color: var(--nu-muted);
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

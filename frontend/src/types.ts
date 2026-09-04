@@ -12,6 +12,14 @@ export interface HealthResponse {
     models?: string[]
     error?: string
     requested: string
+    provider?: string
+  }
+  llm?: {
+    ok: boolean
+    available: boolean
+    error?: string
+    requested: string
+    provider?: string
   }
 }
 
@@ -39,6 +47,22 @@ export interface AgentReview {
   error: string | null
 }
 
+export interface LlmUsage {
+  provider?: string | null
+  model?: string | null
+  calls: number
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  cached_prompt_tokens?: number
+  estimated_usd: number
+  pricing?: {
+    input_usd_per_million: number
+    output_usd_per_million: number
+    note?: string
+  }
+}
+
 export interface ApplicantResult {
   file: string
   applicant_name: string | null
@@ -49,6 +73,10 @@ export interface ApplicantResult {
   facts: ExtractedFacts
   scores: Step1Scores
   markdown_files: Record<string, string>
+  redacted_for_llm?: boolean
+  redaction_notes?: string[]
+  redacted_file?: string | null
+  llm_usage?: LlmUsage | null
 }
 
 export interface JobProgress {
@@ -68,6 +96,7 @@ export interface Job {
   files: string[]
   applicants: ApplicantResult[]
   excel_name: string | null
+  llm_usage?: LlmUsage | null
   error: string | null
   created_at: string
   updated_at: string

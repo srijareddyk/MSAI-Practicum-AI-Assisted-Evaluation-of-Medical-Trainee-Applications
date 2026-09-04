@@ -1,0 +1,41 @@
+# Full stack: Optival UI/API + local Ollama
+# Azure personal VMs: keep DEFAULT_MODEL at 7b unless the VM has ≥16 GB RAM.
+services:
+  app:
+    build: .
+    ports:
+      - "80:8000"
+      - "8000:8000"
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-qwen2.5:7b}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    volumes:
+      - appdata:/app/api_data
+    depends_on:
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 24h
+    restart: unless-stopped
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-qwen2.5:7b}
+    entrypoint: ["/bin/sh", "-c"]
+    command: "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull $$DEFAULT_MODEL"
+    restart: "no"
+
+volumes:
+  appdata:
+  ollama:

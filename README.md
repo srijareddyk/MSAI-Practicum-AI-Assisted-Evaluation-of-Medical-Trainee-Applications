@@ -87,8 +87,8 @@ python -m llm_score.cli applications/*.pdf \
 | Agent | File | Constant |
 |-------|------|----------|
 | Factual briefing | `llm_score/prompts.py` | `BRIEF_PROMPT` |
-| Doc A (research-oriented reviewer) | `llm_score/prompts.py` | `DOC_A_PROMPT` |
-| Doc B (clinical/leadership-oriented reviewer) | `llm_score/prompts.py` | `DOC_B_PROMPT` |
+| Doc A (physician-scientist; science-weighted A/B/C) | `llm_score/prompts.py` | `DOC_A_SYSTEM` + `DOC_A_PROMPT` |
+| Doc B (clinician-educator; trainability-weighted A/B/C) | `llm_score/prompts.py` | `DOC_B_SYSTEM` + `DOC_B_PROMPT` |
 
 ## Privacy and data handling
 
@@ -111,3 +111,7 @@ rubric/template.xlsx  Screening workbook template
 - Agent scores are drafts for faculty validation — not final decisions.
 - Score quality depends on the local model and PDF text extraction.
 - Doc A and Doc B may disagree by design (independent reviewers).
+
+## Azure
+
+Host on a personal Azure VM with Docker Compose. See **[AZURE.md](AZURE.md)**.

@@ -4,15 +4,32 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill
-from openpyxl.workbook.workbook import Workbook
-from openpyxl.worksheet.worksheet import Worksheet
+from typing import TYPE_CHECKING, Any
 
 from application_analyzer.facts import ExtractedFacts
 from application_analyzer.scoring import RubricScores
 from llm_score.reviewers import AgentReview
+
+if TYPE_CHECKING:
+    from openpyxl.workbook.workbook import Workbook
+    from openpyxl.worksheet.worksheet import Worksheet
+
+_load_workbook: Any = None
+PURPLE_FILL: Any = None
+AGENT_FILL: Any = None
+
+
+def _ensure_openpyxl() -> None:
+    """Import openpyxl on first Excel write. Module-level import can hang on iCloud."""
+    global _load_workbook, PURPLE_FILL, AGENT_FILL
+    if _load_workbook is not None:
+        return
+    from openpyxl import load_workbook
+    from openpyxl.styles import PatternFill
+
+    _load_workbook = load_workbook
+    PURPLE_FILL = PatternFill(fill_type="solid", fgColor="D9B3FF")
+    AGENT_FILL = PatternFill(fill_type="solid", fgColor="B3D9FF")
 
 # Matches Kurup worksheet layout (see rubric/*.xlsx)
 ROW_APPLICANT_NAME = 2
@@ -38,8 +55,6 @@ COL_DOC_A = 4  # D
 COL_DOC_B = 5  # E
 ROW_SCORE_HEADERS = 4
 COL_SUMMARY = {"msq": 14, "msp": 15, "uq": 16, "up": 17, "usmle": 18}
-PURPLE_FILL = PatternFill(fill_type="solid", fgColor="D9B3FF")
-AGENT_FILL = PatternFill(fill_type="solid", fgColor="B3D9FF")
 
 STEP1_ROWS = frozenset(
     {
@@ -175,7 +190,8 @@ def write_workbook(
     doc_a: AgentReview | None = None,
     doc_b: AgentReview | None = None,
 ) -> None:
-    wb = load_workbook(template_path)
+    _ensure_openpyxl()
+    wb = _load_workbook(template_path)
     sheetnames = wb.sheetnames
     if not sheetnames:
         raise ValueError("Template workbook has no sheets")
@@ -205,7 +221,8 @@ def write_multi_applicant_workbook(
     strip_template_sheets: bool = True,
     agent_reviews: list[tuple[AgentReview | None, AgentReview | None]] | None = None,
 ) -> None:
-    wb = load_workbook(template_path)
+    _ensure_openpyxl()
+    wb = _load_workbook(template_path)
     sheetnames = wb.sheetnames
     if not sheetnames:
         raise ValueError("Template workbook has no sheets")

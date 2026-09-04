@@ -11,6 +11,7 @@ import type {
   ApplicantResult,
   HealthResponse,
   Job,
+  LlmUsage,
 } from './types'
 import './App.css'
 
@@ -28,6 +29,7 @@ const SCORE_LABELS: Record<string, string> = {
 const STAGE_COPY: Record<string, string> = {
   queued: 'Queued…',
   extracting: 'Extracting facts from PDF…',
+  redacting: 'Redacting identifiers before cloud LLM…',
   briefing: 'Generating factual briefing…',
   doc_a: 'Doc A reviewing application…',
   doc_b: 'Doc B reviewing application…',
@@ -35,6 +37,48 @@ const STAGE_COPY: Record<string, string> = {
   writing_excel: 'Writing Excel workbook…',
   complete: 'Complete',
   error: 'Error',
+}
+
+function formatUsd(value: number): string {
+  if (value < 0.01) return `$${value.toFixed(4)}`
+  return `$${value.toFixed(3)}`
+}
+
+function UsageCard({ usage, title }: { usage: LlmUsage; title: string }) {
+  return (
+    <div className="usage-card">
+      <strong>{title}</strong>
+      <dl className="usage-grid">
+        <div>
+          <dt>Azure calls</dt>
+          <dd>{usage.calls}</dd>
+        </div>
+        <div>
+          <dt>Input tokens</dt>
+          <dd>{usage.prompt_tokens.toLocaleString()}</dd>
+        </div>
+        <div>
+          <dt>Output tokens</dt>
+          <dd>{usage.completion_tokens.toLocaleString()}</dd>
+        </div>
+        <div>
+          <dt>Total tokens</dt>
+          <dd>{usage.total_tokens.toLocaleString()}</dd>
+        </div>
+        <div>
+          <dt>Estimated credit</dt>
+          <dd>{formatUsd(usage.estimated_usd)}</dd>
+        </div>
+      </dl>
+      <p className="usage-note">
+        {usage.model || 'Azure OpenAI'} · billed against your Azure credit at list price
+        {usage.pricing
+          ? ` ($${usage.pricing.input_usd_per_million}/1M input, $${usage.pricing.output_usd_per_million}/1M output)`
+          : ''}
+        . Names stay on this computer for the Excel file.
+      </p>
+    </div>
+  )
 }
 
 function formatScore(value: number | string | null | undefined): string {
@@ -86,7 +130,7 @@ function Dropzone({
       >
         <div className="drop-icon">↑</div>
         <h3>Upload ERAS application PDFs</h3>
-        <p>Drag and drop, or click to browse. Processing stays local via Ollama.</p>
+        <p>Drag and drop, or click to browse. Use dummy PDFs only on personal Azure.</p>
         <input
           ref={inputRef}
           className="hidden-input"
@@ -256,6 +300,9 @@ function ResultsView({ job }: { job: Job }) {
 
   return (
     <div>
+      {job.llm_usage && job.llm_usage.calls > 0 && (
+        <UsageCard usage={job.llm_usage} title="Azure usage for this screening" />
+      )}
       {job.applicants.length > 1 && (
         <div className="applicant-tabs">
           {job.applicants.map((a, i) => (
@@ -304,6 +351,9 @@ function ResultsView({ job }: { job: Job }) {
               Doc B MD
             </a>
           )}
+          <a className="btn btn-ghost" href="/developer">
+            Developer view
+          </a>
         </div>
       </div>
 
@@ -350,18 +400,19 @@ function ResultsView({ job }: { job: Job }) {
             Doc A & Doc B reviews
           </h3>
           <p className="section-sub">
-            Independent AI screeners with different emphases. Draft scores for faculty validation.
+            Two independent readers with different judgment rules — they should not match
+            row-for-row. Draft scores for faculty validation.
           </p>
           <div className="compare">
             <AgentColumn
               title="Doc A"
-              focus="Research · publications · letters"
+              focus="Physician-scientist · research trajectory · scholarly letters · A/B/C from science"
               review={applicant.doc_a}
               variant="doc-a"
             />
             <AgentColumn
               title="Doc B"
-              focus="Leadership · service · resilience"
+              focus="Clinician-educator · leadership · grit · character letters · A/B/C from trainability"
               review={applicant.doc_b}
               variant="doc-b"
             />
@@ -370,6 +421,20 @@ function ResultsView({ job }: { job: Job }) {
       )}
 
       <BriefingView briefing={applicant.briefing} />
+
+      {applicant.redacted_for_llm && (
+        <div className="notes">
+          <strong>Identifiers stripped before Azure</strong>
+          <ul>
+            {(applicant.redaction_notes && applicant.redaction_notes.length
+              ? applicant.redaction_notes
+              : ['Name, address, email, phone, dates of birth, and IDs were scanned out.']
+            ).map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {applicant.facts.notes?.length > 0 && (
         <div className="notes">
@@ -443,17 +508,21 @@ export default function App() {
     return () => window.clearInterval(id)
   }, [job])
 
-  const ollamaOk = health?.ollama.ok && health.ollama.available
+  const llm = health?.llm ?? health?.ollama
+  const llmOk = Boolean(llm?.ok && llm?.available)
   const apiOk = health?.status === 'ok'
 
   const statusLabel = useMemo(() => {
     if (!health) return 'Checking services…'
     if (!apiOk) return 'API offline'
     if (!health.template_present) return 'Rubric template missing'
-    if (!health.ollama.ok) return 'Ollama unreachable'
-    if (!health.ollama.available) return `Model ${health.default_model} not pulled`
-    return 'Ready · local Ollama'
-  }, [health, apiOk])
+    const provider = llm?.provider || 'ollama'
+    if (!llm?.ok) {
+      return provider === 'azure' ? 'Azure OpenAI not configured' : 'Ollama unreachable'
+    }
+    if (!llm?.available) return `Model ${health.default_model} not ready`
+    return provider === 'azure' ? 'Ready · Azure OpenAI' : 'Ready · local Ollama'
+  }, [health, apiOk, llm])
 
   const onSubmit = useCallback(async () => {
     setError(null)
@@ -486,9 +555,12 @@ export default function App() {
           </div>
         </a>
         <div className="status-pill">
-          <span className={`status-dot ${ollamaOk && apiOk ? 'ok' : 'warn'}`} />
+          <span className={`status-dot ${llmOk && apiOk ? 'ok' : 'warn'}`} />
           {statusLabel}
         </div>
+        <a className="status-pill" href="/developer">
+          Developer
+        </a>
       </header>
 
       <section className="hero">
@@ -576,11 +648,11 @@ export default function App() {
             <div className="privacy-note">
               <strong>Privacy (FERPA)</strong>
               <p>
-                Applications are processed locally — nothing is sent to cloud LLM APIs. There is
-                no fully automatic de-identification that is 100% reliable: names and identifiers
-                appear throughout personal statements, letters, MSPEs, and publications. Treat
-                uploads as identifiable education records and keep them on approved institutional
-                systems.
+                Objective scores stay on this machine. Before any Azure call, the app removes the
+                applicant name, home address, email, phone, date of birth, and IDs from the text
+                it sends. The Excel file on this computer still shows the real name for faculty.
+                Unique career facts in letters can still identify someone — use dummy PDFs when
+                you can.
               </p>
             </div>
 

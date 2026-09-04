@@ -13,10 +13,12 @@ from application_analyzer.facts import ExtractedFacts, extract_facts_from_text
 from application_analyzer.pdf_extract import extract_text_from_pdf
 from application_analyzer.scoring import RubricScores, compute_scores
 from llm_score.brief import extract_reviewer_brief
-from llm_score.llm_client import DEFAULT_MODEL
+from llm_score.llm_client import DEFAULT_MODEL, LLM_PROVIDER
 from llm_score.markdown_export import briefing_to_markdown, review_to_markdown
+from llm_score.redact import apply_identity_redactions, cloud_llm_enabled, redact_application_text
 from llm_score.reviewers import AgentReview, run_doc_a, run_doc_b
 from llm_score.text_strip import strip_for_llm
+from llm_score.usage import start_usage_tracker
 
 ProgressCallback = Callable[[str, dict[str, Any]], None]
 
@@ -47,6 +49,7 @@ class PipelineResult:
     applicants: list[dict[str, Any]]
     excel_path: Path
     briefings_dir: Path
+    llm_usage: dict[str, Any] | None = None
 
 
 def run_pipeline(
@@ -69,6 +72,8 @@ def run_pipeline(
     briefings_dir = output_dir / "briefings"
     briefings_dir.mkdir(parents=True, exist_ok=True)
     excel_path = output_dir / "screening_scores.xlsx"
+    redacted_dir = output_dir / "redacted_for_azure"
+    usage = start_usage_tracker(provider=LLM_PROVIDER, model=model)
 
     def emit(stage: str, **extra: Any) -> None:
         if on_progress:
@@ -91,9 +96,23 @@ def run_pipeline(
         doc_b: AgentReview | None = None
         stripped_len = 0
         markdown_files: dict[str, str] = {}
+        redaction_notes: list[str] = []
 
         if not skip_llm:
             stripped = strip_for_llm(text)
+            usage_before = usage.snapshot()
+            if cloud_llm_enabled():
+                stripped, redaction_notes = redact_application_text(
+                    stripped, facts, pdf, harvest_from=text
+                )
+                redacted_dir.mkdir(parents=True, exist_ok=True)
+                (redacted_dir / f"{pdf.stem}.txt").write_text(stripped, encoding="utf-8")
+                emit(
+                    "redacting",
+                    index=index,
+                    total=total,
+                    applicant=facts.applicant_name or pdf.name,
+                )
             stripped_len = len(stripped)
             name = facts.applicant_name or pdf.name
             emit("briefing", index=index, total=total, applicant=name)
@@ -109,6 +128,10 @@ def run_pipeline(
 
             if not skip_agents:
                 briefing_json = json.dumps(brief, indent=2, ensure_ascii=False)
+                if cloud_llm_enabled():
+                    briefing_json, _ = apply_identity_redactions(
+                        briefing_json, facts, pdf, harvest_from=text
+                    )
                 emit("doc_a", index=index, total=total, applicant=name)
                 doc_a = run_doc_a(stripped, briefing_json, model=model)
                 doc_a_path = briefings_dir / _safe_md_filename(facts.applicant_name, pdf, "_doc_a")
@@ -152,6 +175,10 @@ def run_pipeline(
                     "usmle_step1": scores.usmle_step1,
                 },
                 "markdown_files": markdown_files,
+                "redacted_for_llm": bool(not skip_llm and cloud_llm_enabled()),
+                "redaction_notes": redaction_notes,
+                "redacted_file": f"{pdf.stem}.txt" if (not skip_llm and cloud_llm_enabled()) else None,
+                "llm_usage": None if skip_llm else usage.delta(usage_before).to_dict(),
             }
         )
         emit("applicant_done", index=index, total=total, applicant=facts.applicant_name or pdf.name)
@@ -178,8 +205,10 @@ def run_pipeline(
         )
 
     emit("complete", total=total)
+    usage_payload = None if skip_llm else usage.to_dict()
     return PipelineResult(
         applicants=applicants,
         excel_path=excel_path,
         briefings_dir=briefings_dir,
+        llm_usage=usage_payload,
     )

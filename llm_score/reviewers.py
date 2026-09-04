@@ -6,7 +6,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from llm_score.llm_client import DEFAULT_MODEL, call_model_json
-from llm_score.prompts import DOC_A_PROMPT, DOC_B_PROMPT
+from llm_score.prompts import DOC_A_PROMPT, DOC_A_SYSTEM, DOC_B_PROMPT, DOC_B_SYSTEM
+
+# Distinct sampling so the two agents do not collapse to the same conservative JSON.
+DOC_A_TEMPERATURE = 0.35
+DOC_B_TEMPERATURE = 0.55
 
 SCORE_KEYS = (
     "scientific_pursuits_education",
@@ -93,6 +97,8 @@ def run_doc_a(
     raw = call_model_json(
         DOC_A_PROMPT,
         model=model,
+        temperature=DOC_A_TEMPERATURE,
+        system=DOC_A_SYSTEM,
         application_text=application_text,
         briefing_json=briefing_json,
     )
@@ -107,6 +113,8 @@ def run_doc_b(
     raw = call_model_json(
         DOC_B_PROMPT,
         model=model,
+        temperature=DOC_B_TEMPERATURE,
+        system=DOC_B_SYSTEM,
         application_text=application_text,
         briefing_json=briefing_json,
     )

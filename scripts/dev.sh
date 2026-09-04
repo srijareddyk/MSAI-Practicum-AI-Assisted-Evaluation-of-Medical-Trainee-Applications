@@ -9,8 +9,15 @@ if [[ ! -d frontend/node_modules ]]; then
   (cd frontend && npm install)
 fi
 
+if [[ -x "$HOME/.venvs/optival/bin/python" ]]; then
+  PYTHON="$HOME/.venvs/optival/bin/python"
+else
+  PYTHON="${PYTHON:-python}"
+fi
+
 echo "Starting API on http://127.0.0.1:8000 ..."
-python -m uvicorn api.server:app --reload --host 127.0.0.1 --port 8000 &
+# Do not use --reload: watchfiles + iCloud Desktop can hang startup for minutes.
+PYTHONUNBUFFERED=1 "$PYTHON" -u -m uvicorn api.server:app --host 127.0.0.1 --port 8000 &
 API_PID=$!
 
 cleanup() {

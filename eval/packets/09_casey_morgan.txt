@@ -1,0 +1,37 @@
+FICTIONAL TEST PACKET. Not a real application.
+
+Applicant's Name: Casey Morgan
+
+STATEMENT OF PURPOSE
+
+Artificial intelligence is the future, and I want to be part of that future at Northwestern. I have always loved technology and I think MSAI would be an amazing experience. I am a people person and I work hard. In my classes I did several projects with AI, including a to-do app and a digit recognizer, and I learned a lot from them.
+
+I believe I would contribute to the Northwestern community and make the most of every opportunity. My dream is to work in tech and use AI to help businesses. I am open to any specialization the faculty think is best. Thank you for your time and for considering me for this prestigious program. I know I can succeed if I am given the chance.
+
+EDUCATION
+
+Undergraduate institution: Illinois State University
+Degree: B.S. Information Systems, 2025
+Cumulative GPA: 3.20
+
+RESEARCH
+
+No research experience.
+
+PROJECTS
+
+Course project, fall 2024: a to-do list web app for an information systems class. It stores tasks in a database. It does not use a learned model. Course project, spring 2025: a digit recognizer using a tutorial neural network on the MNIST images supplied by the instructor. I followed the tutorial and submitted the notebook.
+
+WORK EXPERIENCE
+
+Help desk student employee, Illinois State technology support, 2023-2025. I reset passwords and imaged laptops.
+
+HONORS AND AWARDS
+
+None.
+
+LETTERS OF RECOMMENDATION
+
+Letter 1. Supervisor Pat Nolan, campus help desk. "Casey is a hard worker and a pleasure to have on the desk. Students like Casey. I recommend Casey."
+
+Letter 2. Instructor Jamie Cole, Illinois State. "Casey completed the required projects and attended class. Casey is a hardworking student. I am happy to support the application."

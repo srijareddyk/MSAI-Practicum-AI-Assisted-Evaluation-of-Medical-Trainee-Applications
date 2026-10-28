@@ -1,0 +1,39 @@
+FICTIONAL TEST PACKET. Not a real application.
+
+Applicant's Name: Priya Shah
+
+STATEMENT OF PURPOSE
+
+I am applying to Northwestern's MSAI program to move from shipping ranking models to understanding when those models fail. At an internship with a retail search team I owned the feature pipeline for a learning-to-rank model. The model went to production for a category page. I also wrote the note that said we should not launch a second page because the offline gain did not survive a holdout week.
+
+That note is the work I want more of. I can implement a ranker. I am less sure how to design the evaluation when the click log is biased. MSAI's machine learning systems and evaluation courses are the reason I am applying here rather than to a general computer science master's. I want a year of coursework in probabilistic modeling and a project on offline evaluation, then a role building models whose failures I can explain.
+
+My record is a computer engineering degree with linear algebra, probability, algorithms, and two machine learning courses, plus the production system above. I am applying because the production work showed me the questions I cannot answer from an internship alone.
+
+EDUCATION
+
+Undergraduate institution: University of Illinois Urbana-Champaign
+Degree: B.S. Computer Engineering, 2024
+Cumulative GPA: 3.91
+
+RESEARCH
+
+No university laboratory appointment. The technical research in this packet is the internship evaluation study below, which I wrote up internally. I did not publish it.
+
+PROJECTS
+
+Category-page ranker, summer 2024, retail search internship. I trained a LightGBM ranker, built the daily feature job, and compared it with the previous heuristic on a one-week holdout. The first page shipped. I recommended against shipping the second page. The repository is internal. My mentor can describe the design.
+
+WORK EXPERIENCE
+
+Machine learning engineering intern, Northline Retail, Champaign, May 2024 to August 2024. Course assistant for ECE 374, Algorithms, spring 2024.
+
+HONORS AND AWARDS
+
+James Scholar, University of Illinois, 2022-2024. Dean's list each semester.
+
+LETTERS OF RECOMMENDATION
+
+Letter 1. Maya Krishnan, staff engineer, Northline Retail. "Priya owned the ranker that we shipped. More important, Priya is the intern who told us not to ship the second page. The memo was specific, with the holdout numbers, and it was right. I would hire Priya back as an engineer."
+
+Letter 2. Professor David Lang, University of Illinois. "Priya was among the strongest students in my algorithms course and then assisted it. The homework solutions were correct, and the explanations in office hours were precise. I recommend Priya for a technical graduate program."

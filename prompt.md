@@ -1,6 +1,6 @@
 # Prompts Reference
 
-All prompts used by `pipeline.py`, organized by layer. Edit `pipeline.py` directly to update any prompt. This document is a human-readable reference for review and discussion.
+The live web and CLI screeners read `llm_score/prompts.py`. Those prompts score **MSAI master's** packets (statement of purpose, preparation, projects, letters). This file keeps the earlier residency prototype for reference. Do not treat it as the current rubric.
 
 ---
 

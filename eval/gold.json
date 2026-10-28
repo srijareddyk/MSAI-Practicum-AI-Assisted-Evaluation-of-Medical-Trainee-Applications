@@ -1,0 +1,77 @@
+{
+  "model_note": "Intended bands for the fictional packets. A = invite to interview (pass), B = committee should look (review), C = do not advance (fail).",
+  "packets": {
+    "01_avery_chen": {
+      "name": "Avery Chen",
+      "band": "A",
+      "expect_split": false,
+      "note": "Two years of research, a first-author workshop paper, a specific MSAI plan, and two detailed letters."
+    },
+    "02_priya_shah": {
+      "name": "Priya Shah",
+      "band": "A",
+      "expect_split": false,
+      "note": "Shipped a production ranker, a quantitative degree, a specific evaluation question, and strong letters."
+    },
+    "03_marcus_hale": {
+      "name": "Marcus Hale",
+      "band": "A",
+      "expect_split": false,
+      "note": "Open-source solvers with outside contributors, a heavy mathematics record, and a specific MSAI plan."
+    },
+    "04_elena_vasquez": {
+      "name": "Elena Vasquez",
+      "band": "A",
+      "expect_split": false,
+      "note": "Second-author robotics paper with a clearly owned part, teaching, and a specific perception project."
+    },
+    "05_jordan_hale": {
+      "name": "Jordan Hale",
+      "band": "B",
+      "expect_split": true,
+      "note": "Strong retrieval demo and letters, but the statement of purpose is generic. Technical and fit readers should disagree."
+    },
+    "06_sam_okonkwo": {
+      "name": "Sam Okonkwo",
+      "band": "B",
+      "expect_split": true,
+      "note": "Specific public-data statement and night-school mathematics, with little technical depth. Fit and technical readers should disagree."
+    },
+    "07_riley_nguyen": {
+      "name": "Riley Nguyen",
+      "band": "B",
+      "expect_split": false,
+      "note": "Honest capstone, foundational courses, no paper or internship model. A committee look, not an automatic invite."
+    },
+    "08_taylor_brooks": {
+      "name": "Taylor Brooks",
+      "band": "B",
+      "expect_split": false,
+      "note": "One careful internship notebook, B-level theory grades, and a second letter that is only collegial."
+    },
+    "09_casey_morgan": {
+      "name": "Casey Morgan",
+      "band": "C",
+      "expect_split": false,
+      "note": "Tutorial class projects, a vague statement, and letters that say only that the applicant works hard."
+    },
+    "10_drew_patel": {
+      "name": "Drew Patel",
+      "band": "C",
+      "expect_split": false,
+      "note": "High biology grades and almost no computing. The statement names medicine and AI without a technical plan."
+    },
+    "11_quinn_alvarez": {
+      "name": "Quinn Alvarez",
+      "band": "C",
+      "expect_split": false,
+      "note": "A four-week lab visit, course minimums, a 2.95 GPA, and letters that mention missed deadlines."
+    },
+    "12_harper_singh": {
+      "name": "Harper Singh",
+      "band": "C",
+      "expect_split": false,
+      "note": "A communications degree, an online quiz certificate, and letters about writing rather than quantitative work."
+    }
+  }
+}

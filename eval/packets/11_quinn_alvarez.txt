@@ -1,0 +1,37 @@
+FICTIONAL TEST PACKET. Not a real application.
+
+Applicant's Name: Quinn Alvarez
+
+STATEMENT OF PURPOSE
+
+I am applying to MSAI because I want a fresh start in artificial intelligence at a top school. I think Northwestern can give me the environment I need to focus. I am interested in all areas of AI, from robotics to language, and I will work harder in graduate school than I did as an undergraduate. I had some research experience and I know what labs are like.
+
+Please consider the person I am becoming and not only my GPA. I am passionate and I will contribute. A master's degree is my path into the industry. I would be grateful for an offer and I will make the most of it.
+
+EDUCATION
+
+Undergraduate institution: Arizona State University
+Degree: B.S. Computer Science, 2024
+Cumulative GPA: 2.95
+
+RESEARCH
+
+Unpaid observer in a robotics lab, May 2024, about four weeks. I attended two group meetings and watched a doctoral student collect data. I did not write code for the lab and I am not on a paper.
+
+PROJECTS
+
+Course projects required by the degree: a socket chat program, a small web scraper, and a class assignment that trained a decision tree on a provided CSV. I do not have an independent project.
+
+WORK EXPERIENCE
+
+Seasonal retail associate, 2022 and 2023 summers.
+
+HONORS AND AWARDS
+
+None.
+
+LETTERS OF RECOMMENDATION
+
+Letter 1. Professor Alan Ruiz, Arizona State University. "Quinn completed my course. The project met the minimum specification. Quinn missed two deadlines and submitted the scraper a week late. I can confirm the degree progress. I do not have a stronger recommendation than that."
+
+Letter 2. Graduate student Morgan Lee, Arizona State University. "Quinn visited our lab for a few weeks. Quinn was polite. Quinn did not take on a task. I cannot recommend Quinn for a research program on the basis of that visit."

@@ -1,0 +1,39 @@
+FICTIONAL TEST PACKET. Not a real application.
+
+Applicant's Name: Marcus Hale
+
+STATEMENT OF PURPOSE
+
+I am applying to the MSAI program to study optimization for models that do not fit on one machine. I maintain an open-source library, SmallBatch, that implements a few stochastic solvers for people who want a readable PyTorch training loop rather than a framework. About forty GitHub accounts have starred it, and I have merged patches from six outside contributors. The users are students. I do not want to overstate that.
+
+The mathematics degree is the other half. I have had linear algebra, real analysis, probability, numerical methods, and a graduate-level convex optimization course as an undergraduate. What I do not have is a lab appointment or a paper. The library is the technical artifact. Northwestern is the program I want because the MSAI curriculum pairs the optimization coursework with systems, which is the gap between my solvers and a model someone else can train.
+
+I hope to spend the year on distributed training and a project that turns one of the SmallBatch solvers into something a course staff could assign. I am applying for that sequence, not for a general credential.
+
+EDUCATION
+
+Undergraduate institution: University of Wisconsin-Madison
+Degree: B.S. Mathematics and Computer Sciences, 2025
+Cumulative GPA: 3.74
+
+RESEARCH
+
+No formal research appointment. Independent work on SmallBatch, described under projects, from June 2024 to the present.
+
+PROJECTS
+
+SmallBatch, an open-source PyTorch training library. I wrote the solvers, the tests, and the documentation. Six outside contributors have merged patches. The issue tracker shows students using it for class projects. Repository: a public GitHub project under my name, started June 2024.
+
+WORK EXPERIENCE
+
+Tutor, Madison Mathematics Learning Center, September 2023 to May 2025, eight hours a week. I ran drop-in hours for linear algebra.
+
+HONORS AND AWARDS
+
+Van Vleck scholarship for mathematics, 2024. Dean's list, four semesters.
+
+LETTERS OF RECOMMENDATION
+
+Letter 1. Professor Ruth Adler, University of Wisconsin. "Marcus took my convex optimization course and then built a library whose solvers match the algorithms in the course. I have read the documentation. It is accurate. Marcus is ready for graduate coursework in optimization, and I recommend him strongly."
+
+Letter 2. Professor Ian Brooks, University of Wisconsin. "I supervised Marcus only as an instructor in numerical methods, not as a research advisor. Within that scope, the work was excellent. He is the student other students asked for by name in the tutoring center. I recommend him for MSAI."

@@ -47,7 +47,7 @@ def briefing_to_markdown(
 
     spe_bullets = _bullets(spe.get("evidence") or [])
     if spe.get("md_phd") is True:
-        spe_bullets.insert(0, "- Holds MD/PhD (per application)")
+        spe_bullets.insert(0, "- Prior research master's or PhD noted")
     for role in (spe.get("research_roles") or [])[:3]:
         if isinstance(role, dict):
             spe_bullets.append(f"- {role.get('role', 'Research')}: {role.get('duration', '?')}")
@@ -64,13 +64,13 @@ def briefing_to_markdown(
 
     ple_bullets = _bullets(ple.get("evidence") or [])
     if ple.get("mba_mph_or_equivalent"):
-        ple_bullets.insert(0, "- MBA/MPH or equivalent leadership degree noted")
+        ple_bullets.insert(0, "- Formal computing or quantitative preparation noted")
 
     plo_bullets = _bullets(plo.get("evidence") or [])
     for label, key in (
-        ("For-profit/director", "for_profit_or_director_roles"),
-        ("Large-scale QI/public health", "large_scale_qi_or_public_health"),
-        ("Technical health tools", "technical_health_tools"),
+        ("Led or founded", "for_profit_or_director_roles"),
+        ("Large collaborative effort", "large_scale_qi_or_public_health"),
+        ("Technical project", "technical_health_tools"),
     ):
         for item in (plo.get(key) or [])[:2]:
             plo_bullets.append(f"- {label}: {item}")
@@ -91,13 +91,13 @@ def briefing_to_markdown(
     )
 
     body = [
-        _section("Scientific Pursuits — Education/Experience", spe.get("summary", ""), spe_bullets),
-        _section("Scientific Pursuits — Output", spo.get("summary", ""), spo_bullets),
-        _section("Professional Leadership — Education", ple.get("summary", ""), ple_bullets),
-        _section("Professional Leadership — Output", plo.get("summary", ""), plo_bullets),
-        _section("Social Leadership & Service", sl.get("summary", ""), sl_bullets),
-        _section("Resilience / Grit / Distance Travelled", dt.get("summary", ""), dt_bullets),
-        _section("Endorsement by Letter Writers", elw.get("summary", ""), elw_bullets),
+        _section("Technical preparation", spe.get("summary", ""), spe_bullets),
+        _section("Research and project output", spo.get("summary", ""), spo_bullets),
+        _section("Formal quantitative preparation", ple.get("summary", ""), ple_bullets),
+        _section("Technical leadership", plo.get("summary", ""), plo_bullets),
+        _section("Collaboration and service", sl.get("summary", ""), sl_bullets),
+        _section("Statement of purpose and trajectory", dt.get("summary", ""), dt_bullets),
+        _section("Letters of recommendation", elw.get("summary", ""), elw_bullets),
     ]
 
     if brief.get("error"):
@@ -126,14 +126,14 @@ def review_to_markdown(
 
     lines = header + ["## Summary", "", review.summary or "_No summary returned._", "", "## Scores", ""]
     labels = {
-        "scientific_pursuits_education": "Scientific Pursuits — Education/Experience (row 5)",
-        "scientific_pursuits_output": "Scientific Pursuits — Output (row 6)",
-        "professional_leadership_education": "Professional Leadership — Education (row 7)",
-        "professional_leadership_output": "Professional Leadership — Output (row 8)",
-        "social_leadership": "Social Leadership & Service (row 9)",
-        "resilience": "Resilience / Grit (row 10)",
-        "endorsement": "Endorsement by Letter Writers (row 11)",
-        "reviewer_recommendation": "Recommendation (row 12)",
+        "scientific_pursuits_education": "Technical preparation",
+        "scientific_pursuits_output": "Research and project output",
+        "professional_leadership_education": "Formal quantitative preparation",
+        "professional_leadership_output": "Technical leadership",
+        "social_leadership": "Collaboration and service",
+        "resilience": "Statement of purpose and trajectory",
+        "endorsement": "Letters of recommendation",
+        "reviewer_recommendation": "Interview recommendation",
     }
     for key in SCORE_KEYS:
         score = review.scores.get(key)

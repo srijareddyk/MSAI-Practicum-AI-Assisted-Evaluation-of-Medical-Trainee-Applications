@@ -7,7 +7,7 @@ from typing import Any
 
 import ollama
 
-DEFAULT_MODEL = "qwen3:14b"
+DEFAULT_MODEL = "qwen3:8b"
 
 
 def parse_json_response(raw: str) -> dict[str, Any]:
@@ -32,7 +32,9 @@ def call_model_json(
     response = ollama.chat(
         model=model,
         messages=[{"role": "user", "content": content}],
-        options={"temperature": temperature},
+        format="json",
+        think=False,
+        options={"temperature": temperature, "num_predict": 1800, "num_ctx": 8192},
     )
     raw = response["message"]["content"].strip()
     return parse_json_response(raw)

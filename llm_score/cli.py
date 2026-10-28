@@ -15,7 +15,7 @@ from application_analyzer.scoring import RubricScores, compute_scores
 from llm_score.brief import extract_reviewer_brief
 from llm_score.llm_client import DEFAULT_MODEL
 from llm_score.markdown_export import briefing_to_markdown, review_to_markdown
-from llm_score.reviewers import AgentReview, run_doc_a, run_doc_b
+from llm_score.reviewers import AgentReview, run_doc_a, run_doc_b, run_doc_c
 from llm_score.text_strip import strip_for_llm
 
 
@@ -32,8 +32,8 @@ def _safe_md_filename(name: str | None, pdf: Path, suffix: str) -> str:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=(
-            "Process ERAS PDFs: Python step-1 scores, factual briefing (1 LLM call), "
-            "and independent Doc A / Doc B agent reviews (2 LLM calls)."
+            "Process MSAI application PDFs: Python step-1 signals, factual briefing "
+            "(1 LLM call), and independent Reviewer A / Reviewer B scores (2 LLM calls)."
         )
     )
     p.add_argument("inputs", nargs="+", type=Path, help="One or more application PDF files")
@@ -122,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         brief: dict | None = None
         doc_a: AgentReview | None = None
         doc_b: AgentReview | None = None
+        doc_c: AgentReview | None = None
         stripped_len = 0
 
         if not args.skip_llm:
@@ -159,7 +160,16 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 print(f"  Wrote {doc_b_path}")
 
-        agent_reviews.append((doc_a, doc_b))
+                print(f"  Reviewer C reading {name}...")
+                doc_c = run_doc_c(stripped, briefing_json, model=args.model)
+                doc_c_path = briefings_dir / _safe_md_filename(facts.applicant_name, pdf, "_doc_c")
+                doc_c_path.write_text(
+                    review_to_markdown(facts.applicant_name or pdf.stem, doc_c, source_file=pdf.name),
+                    encoding="utf-8",
+                )
+                print(f"  Wrote {doc_c_path}")
+
+        agent_reviews.append((doc_a, doc_b, doc_c))
         payload.append(
             {
                 "file": str(pdf),
@@ -177,6 +187,12 @@ def main(argv: list[str] | None = None) -> int:
                     "scores": doc_b.scores,
                     "rationale": doc_b.rationale,
                     "error": doc_b.error,
+                },
+                "doc_c": None if doc_c is None else {
+                    "summary": doc_c.summary,
+                    "scores": doc_c.scores,
+                    "rationale": doc_c.rationale,
+                    "error": doc_c.error,
                 },
                 "facts": {
                     "medical_school": facts.medical_school,
@@ -201,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
 
     strip_sheets = not args.keep_template_sheets
     if len(items) == 1:
-        da, db = agent_reviews[0] if agent_reviews else (None, None)
+        da, db = (agent_reviews[0][0], agent_reviews[0][1]) if agent_reviews else (None, None)
         write_workbook(
             template,
             items[0][0],

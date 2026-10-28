@@ -1,0 +1,338 @@
+{
+  "model": "qwen3:8b",
+  "generated_at": "2026-10-28T08:59:50.768387+00:00",
+  "elapsed_seconds": 575.3,
+  "pass_interview_A": 1,
+  "review_B": 10,
+  "fail_do_not_advance_C": 1,
+  "split_votes": 0,
+  "errors": 0,
+  "exact_band_matches": 6,
+  "packets": 12,
+  "rows": [
+    {
+      "file": "01_avery_chen.pdf",
+      "key": "01_avery_chen",
+      "name": "Avery Chen",
+      "intended": "A",
+      "expect_split": false,
+      "note": "Two years of research, a first-author workshop paper, a specific MSAI plan, and two detailed letters.",
+      "reviewer_a": "A",
+      "reviewer_b": "A",
+      "reviewer_c": "A",
+      "vote": "A",
+      "matched": true,
+      "split": false,
+      "gpa": 3.86,
+      "institution": "University of Michigan",
+      "summaries": {
+        "A": "Avery has strong technical preparation and research output, with a first-author publication and substantial project work. Their quantitative background is solid, and they have demonstrated leadership in both research and teaching. The letters strongly endorse their technical ability.",
+        "B": "Avery has strong technical preparation and research output, with a clear trajectory aligned with the MSAI program. Their collaboration and leadership are evident through code maintenance and teaching, and their statement of purpose is specific and well-connected to the program.",
+        "C": "Avery has strong technical preparation and research experience in clinical NLP, with a first-author workshop paper and substantial project work. Their coursework and research align well with the MSAI program's focus, and their letters strongly endorse their technical capabilities."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 51.6
+    },
+    {
+      "file": "02_priya_shah.pdf",
+      "key": "02_priya_shah",
+      "name": "Priya Shah",
+      "intended": "A",
+      "expect_split": false,
+      "note": "Shipped a production ranker, a quantitative degree, a specific evaluation question, and strong letters.",
+      "reviewer_a": "B",
+      "reviewer_b": "B",
+      "reviewer_c": "B",
+      "vote": "B",
+      "matched": false,
+      "split": false,
+      "gpa": 3.91,
+      "institution": "University of Illinois Urbana-Champaign",
+      "summaries": {
+        "A": "Priya has relevant technical experience in machine learning engineering and a clear motivation for the MSAI program. Her internship work demonstrates practical impact, and her academic background aligns with the program's focus. However, she lacks formal research experience and published output.",
+        "B": "Priya demonstrates strong technical preparation and practical experience in machine learning engineering, with a clear trajectory toward understanding model failures and improving evaluation methods. Her collaboration and service are evident through her internship and course assistant role, and her statement of purpose aligns well with the MSAI program's focus.",
+        "C": "Priya has a strong foundation in quantitative subjects and practical ML engineering experience, with clear evidence of technical impact and a focused academic trajectory aligned with the MSAI program."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 55.0
+    },
+    {
+      "file": "03_marcus_hale.pdf",
+      "key": "03_marcus_hale",
+      "name": "Marcus Hale",
+      "intended": "A",
+      "expect_split": false,
+      "note": "Open-source solvers with outside contributors, a heavy mathematics record, and a specific MSAI plan.",
+      "reviewer_a": "B",
+      "reviewer_b": "B",
+      "reviewer_c": "B",
+      "vote": "B",
+      "matched": false,
+      "split": false,
+      "gpa": 3.74,
+      "institution": "University of Wisconsin-Madison",
+      "summaries": {
+        "A": "The applicant has strong technical preparation in mathematics and computer science, with relevant coursework and an open-source project that demonstrates technical ability. Their project output shows initiative and practical application, though no formal research experience is present. The letters provide specific technical endorsement, and the statement of purpose clearly aligns with the MSAI program's focus.",
+        "B": "The applicant has strong technical preparation in mathematics and optimization, with a clear trajectory toward the MSAI program's focus on systems and optimization. Their open-source project demonstrates technical leadership and practical application, though they lack formal research experience. The statement of purpose and letters strongly support program fit.",
+        "C": "The applicant has strong formal quantitative preparation and a clear technical project with open-source impact, but lacks formal research experience. Their statement aligns with the program's focus on optimization and systems."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 47.2
+    },
+    {
+      "file": "04_elena_vasquez.pdf",
+      "key": "04_elena_vasquez",
+      "name": "Elena Vasquez",
+      "intended": "A",
+      "expect_split": false,
+      "note": "Second-author robotics paper with a clearly owned part, teaching, and a specific perception project.",
+      "reviewer_a": "B",
+      "reviewer_b": "B",
+      "reviewer_c": "B",
+      "vote": "B",
+      "matched": false,
+      "split": false,
+      "gpa": 3.82,
+      "institution": "Purdue University",
+      "summaries": {
+        "A": "Elena has demonstrated technical preparation and project output through her research and development work, along with relevant coursework and teaching experience. Her letters highlight her research and teaching contributions, and her statement shows a clear plan for graduate study.",
+        "B": "Elena demonstrates strong technical preparation and research output, with clear program fit and teaching experience. Her contributions to a research paper and development of a lab tool show technical depth, and her statement aligns well with the MSAI program's focus.",
+        "C": "Elena demonstrates solid technical preparation and research contributions, with clear evidence of coursework and project work relevant to machine learning and robotics. Her teaching experience and specific project goals align well with the MSAI program."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 47.9
+    },
+    {
+      "file": "05_jordan_hale.pdf",
+      "key": "05_jordan_hale",
+      "name": "Jordan Hale",
+      "intended": "B",
+      "expect_split": true,
+      "note": "Strong retrieval demo and letters, but the statement of purpose is generic. Technical and fit readers should disagree.",
+      "reviewer_a": "B",
+      "reviewer_b": "B",
+      "reviewer_c": "B",
+      "vote": "B",
+      "matched": true,
+      "split": false,
+      "gpa": 3.78,
+      "institution": "University of Michigan",
+      "summaries": {
+        "A": "Jordan has completed a B.S. in Computer Science and has engaged in research and engineering projects in information retrieval. They have developed technical artifacts used by others and contributed to course projects. Their letters highlight strong technical ability and readiness for a master's program.",
+        "B": "The applicant has a solid foundation in computer science and relevant research experience, with tangible technical contributions. However, the statement of purpose lacks specificity regarding program fit and career trajectory. The letters and projects demonstrate technical capability, but the application does not clearly articulate a compelling case for the MSAI program.",
+        "C": "Jordan has strong technical preparation and practical experience in information retrieval, with evidence of independent project development and code deployment. The letters and projects demonstrate readiness for graduate-level ML work, though the statement of purpose lacks specificity."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 47.1
+    },
+    {
+      "file": "06_sam_okonkwo.pdf",
+      "key": "06_sam_okonkwo",
+      "name": "Sam Okonkwo",
+      "intended": "B",
+      "expect_split": true,
+      "note": "Specific public-data statement and night-school mathematics, with little technical depth. Fit and technical readers should disagree.",
+      "reviewer_a": "B",
+      "reviewer_b": "B",
+      "reviewer_c": "B",
+      "vote": "B",
+      "matched": true,
+      "split": false,
+      "gpa": 3.45,
+      "institution": "DePaul University",
+      "summaries": {
+        "A": "The applicant has no formal research experience but has engaged in independent data analysis and built a basic machine learning model. They have completed relevant coursework and have a clear, specific project goal aligned with the MSAI program.",
+        "B": "The applicant has limited formal research experience but has engaged in independent data analysis and coursework. They have a clear project goal tied to the MSAI program and demonstrate motivation to improve their technical skills.",
+        "C": "The applicant has completed relevant coursework and has a defined project with public data, but lacks formal research experience or technical leadership. Their statement of purpose is specific and aligned with the program's goals."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 46.9
+    },
+    {
+      "file": "07_riley_nguyen.pdf",
+      "key": "07_riley_nguyen",
+      "name": "Riley Nguyen",
+      "intended": "B",
+      "expect_split": false,
+      "note": "Honest capstone, foundational courses, no paper or internship model. A committee look, not an automatic invite.",
+      "reviewer_a": "B",
+      "reviewer_b": "B",
+      "reviewer_c": "B",
+      "vote": "B",
+      "matched": true,
+      "split": false,
+      "gpa": 3.62,
+      "institution": "Loyola University Chicago",
+      "summaries": {
+        "A": "The applicant has completed a relevant undergraduate degree with foundational quantitative coursework but lacks substantial research or technical project experience beyond a group capstone. They have limited leadership and service experience, and their statement of purpose is focused on program fit rather than a clear trajectory.",
+        "B": "The applicant has a strong academic background in data science and has completed foundational courses, but lacks substantial research or technical leadership experience. Their capstone project shows some technical involvement, but it was a short-term class project with limited impact. They have demonstrated leadership through tutoring, but it is not at a scale that reflects technical leadership. The statement of purpose shows a clear interest in the MSAI program, but lacks specific evidence of readiness for graduate-level research.",
+        "C": "Riley has completed foundational coursework in data science and machine learning, with a clear capstone contribution, but lacks research experience or substantial technical projects. Letters highlight readiness for graduate study, but the application lacks evidence of advanced technical preparation or leadership."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 49.3
+    },
+    {
+      "file": "08_taylor_brooks.pdf",
+      "key": "08_taylor_brooks",
+      "name": "Taylor Brooks",
+      "intended": "B",
+      "expect_split": false,
+      "note": "One careful internship notebook, B-level theory grades, and a second letter that is only collegial.",
+      "reviewer_a": "B",
+      "reviewer_b": "B",
+      "reviewer_c": "B",
+      "vote": "B",
+      "matched": true,
+      "split": false,
+      "gpa": 3.51,
+      "institution": "University of Iowa",
+      "summaries": {
+        "A": "The applicant has a B.S. in Statistics and some internship experience with a technical project, but lacks formal research or leadership roles. Their work involved practical data analysis but no model deployment or publication.",
+        "B": "The applicant has a solid foundation in statistics and practical experience in data analysis, but lacks significant research or technical leadership experience. Their statement of purpose shows clear interest in the MSAI program, though it is somewhat generic.",
+        "C": "The applicant has a solid foundation in statistics and applied machine learning, with practical experience in data analysis and documentation. However, there is limited evidence of advanced technical work or leadership beyond coursework and internships."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 53.2
+    },
+    {
+      "file": "09_casey_morgan.pdf",
+      "key": "09_casey_morgan",
+      "name": "Casey Morgan",
+      "intended": "C",
+      "expect_split": false,
+      "note": "Tutorial class projects, a vague statement, and letters that say only that the applicant works hard.",
+      "reviewer_a": "B",
+      "reviewer_b": "B",
+      "reviewer_c": "B",
+      "vote": "B",
+      "matched": false,
+      "split": false,
+      "gpa": 3.2,
+      "institution": "Illinois State University",
+      "summaries": {
+        "A": "Casey has completed a B.S. in Information Systems and has completed two course-based AI projects, but lacks research experience, technical leadership, and evidence of collaboration or service. The letters emphasize work ethic but lack technical specificity.",
+        "B": "The applicant has a B.S. in Information Systems and completed two AI-related course projects, but lacks research experience and meaningful collaboration. The statement of purpose is generic and does not clearly connect to the MSAI program. Letters are lukewarm and focus on work ethic rather than technical ability.",
+        "C": "Casey has a B.S. in Information Systems with a 3.2 GPA, but lacks research experience and meaningful technical projects beyond coursework. The statement of purpose is generic and lacks specificity. Letters are positive but generic, focusing on work ethic rather than technical ability."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 45.0
+    },
+    {
+      "file": "10_drew_patel.pdf",
+      "key": "10_drew_patel",
+      "name": "Drew Patel",
+      "intended": "C",
+      "expect_split": false,
+      "note": "High biology grades and almost no computing. The statement names medicine and AI without a technical plan.",
+      "reviewer_a": "B",
+      "reviewer_b": "B",
+      "reviewer_c": "B",
+      "vote": "B",
+      "matched": false,
+      "split": false,
+      "gpa": 3.88,
+      "institution": "Boston University",
+      "summaries": {
+        "A": "The applicant has a strong biology background and academic record but lacks computational research experience, formal quantitative training, and technical project output. Their interest in AI for medicine is clear, but the application does not demonstrate readiness for a master's program in AI.",
+        "B": "The applicant has a strong academic record in biology but lacks computational experience or research output relevant to AI. Their statement expresses interest in AI for medicine but lacks specificity or evidence of preparation. Letters highlight diligence but not technical skills.",
+        "C": "The applicant has a strong biology background and academic record but lacks formal computational training or research experience in machine learning. Their statement of purpose shows enthusiasm for applying AI to medicine, but the evidence does not strongly support their readiness for graduate-level machine learning work."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 48.3
+    },
+    {
+      "file": "11_quinn_alvarez.pdf",
+      "key": "11_quinn_alvarez",
+      "name": "Quinn Alvarez",
+      "intended": "C",
+      "expect_split": false,
+      "note": "A four-week lab visit, course minimums, a 2.95 GPA, and letters that mention missed deadlines.",
+      "reviewer_a": "C",
+      "reviewer_b": "B",
+      "reviewer_c": "B",
+      "vote": "B",
+      "matched": false,
+      "split": true,
+      "gpa": 2.95,
+      "institution": "Arizona State University",
+      "summaries": {
+        "A": "Quinn has limited technical preparation and research experience, with no independent projects or publications. The letters are lukewarm and do not provide strong technical endorsement. The statement lacks specificity and program fit.",
+        "B": "Quinn has limited research experience and no substantial technical output. The statement lacks specificity and the letters are lukewarm. The application does not demonstrate strong program fit or technical preparation.",
+        "C": "Quinn's academic background and research experience are limited, with minimal coursework depth and no substantial research output. The letters are lukewarm and do not strongly support technical readiness for graduate work."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 45.5
+    },
+    {
+      "file": "12_harper_singh.pdf",
+      "key": "12_harper_singh",
+      "name": "Harper Singh",
+      "intended": "C",
+      "expect_split": false,
+      "note": "A communications degree, an online quiz certificate, and letters about writing rather than quantitative work.",
+      "reviewer_a": "C",
+      "reviewer_b": "C",
+      "reviewer_c": "C",
+      "vote": "C",
+      "matched": true,
+      "split": false,
+      "gpa": 3.1,
+      "institution": "University of Iowa",
+      "summaries": {
+        "A": "The applicant has no formal technical or research education, no technical publications or projects, and no quantitative background. Their letters and statement emphasize communication skills rather than technical ability. They seek to transition into technical AI roles through the MSAI program.",
+        "B": "The applicant has no formal technical or research education, no technical publications or projects, and limited quantitative background. Their strengths lie in communication and leadership, but they lack the technical preparation required for the MSAI program.",
+        "C": "The applicant has no formal technical or research education, no technical projects, and no quantitative background. Their letters and statement emphasize communication skills rather than technical readiness for an AI master's program."
+      },
+      "errors": {
+        "A": null,
+        "B": null,
+        "C": null
+      },
+      "seconds": 38.3
+    }
+  ]
+}

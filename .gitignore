@@ -11,6 +11,7 @@ venv/
 api_data/
 output/
 briefings/
+eval/runs/
 applications/*.pdf
 *.xlsx
 !rubric/template.xlsx

@@ -6,15 +6,13 @@ import re
 
 # (display name, header pattern, max body chars)
 _SECTION_SPECS: list[tuple[str, re.Pattern[str], int]] = [
-    ("STATEMENT OF PURPOSE", re.compile(r"^(?:STATEMENT OF PURPOSE|SOP)\s*$", re.I), 8000),
-    ("PERSONAL STATEMENT", re.compile(r"^PERSONAL STATEMENT\s*$", re.I), 7000),
-    ("EDUCATION", re.compile(r"^EDUCATION\s*$", re.I), 3500),
-    ("CURRICULUM VITAE", re.compile(r"^(?:CURRICULUM VITAE|R[EÉ]SUM[EÉ]|RESUME|CV)\s*$", re.I), 6000),
-    ("RESEARCH", re.compile(r"^(?:RESEARCH(?:\s+EXPERIENCE)?|RESEARCH ACTIVITIES)\s*$", re.I), 5000),
-    ("PROJECTS", re.compile(r"^(?:PROJECTS|TECHNICAL PROJECTS|SELECTED PROJECTS)\s*$", re.I), 5000),
-    ("PUBLICATIONS", re.compile(r"^PUBLICATIONS\s*$", re.I), 5000),
+    ("EDUCATION", re.compile(r"^EDUCATION\s*$"), 2500),
     ("HONORS AND AWARDS", re.compile(r"^HONORS(?:\s+AND|\s*&)\s+AWARDS\s*$", re.I), 4000),
-    ("WORK EXPERIENCE", re.compile(r"^(?:WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EMPLOYMENT|EXPERIENCES?)\s*$", re.I), 4000),
+    ("PUBLICATIONS", re.compile(r"^PUBLICATIONS\s*$", re.I), 5000),
+    ("RESEARCH ACTIVITIES", re.compile(r"^RESEARCH ACTIVITIES\s*$", re.I), 5000),
+    ("EMPLOYMENT", re.compile(r"^EMPLOYMENT\s*$", re.I), 3500),
+    ("EXPERIENCES", re.compile(r"^EXPERIENCES\s*$", re.I), 4000),
+    ("PERSONAL STATEMENT", re.compile(r"^PERSONAL STATEMENT\s*$", re.I), 7000),
     ("MSPE", re.compile(r"^MSPE\s*$", re.I), 6000),
     ("LETTERS OF RECOMMENDATION", re.compile(r"^LETTERS OF RECOMMENDATION\s*$", re.I), 12000),
     ("LETTER", re.compile(r"^Letter of Recommendation\b", re.I), 8000),
@@ -22,19 +20,17 @@ _SECTION_SPECS: list[tuple[str, re.Pattern[str], int]] = [
 ]
 
 _PRIORITY = (
-    "STATEMENT OF PURPOSE",
     "PERSONAL STATEMENT",
     "LETTER",
     "LETTERS OF RECOMMENDATION",
     "DEAN LETTER",
-    "RESEARCH",
-    "PROJECTS",
+    "MSPE",
+    "RESEARCH ACTIVITIES",
     "PUBLICATIONS",
-    "WORK EXPERIENCE",
-    "CURRICULUM VITAE",
+    "EMPLOYMENT",
+    "EXPERIENCES",
     "HONORS AND AWARDS",
     "EDUCATION",
-    "MSPE",
 )
 
 _BOILERPLATE_LINE = re.compile(

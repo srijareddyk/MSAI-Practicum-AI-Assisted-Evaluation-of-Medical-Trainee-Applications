@@ -4,7 +4,7 @@ Place your private screening workbook template in this folder as:
 
 - `rubric/template.xlsx`
 
-The pipeline writes **Reviewer A** (column D) and **Reviewer B** (column E). Step-1 automated scores pre-fill rows 14–18 in both columns; rows 5–12 are the MSAI narrative rubric filled by the local model.
+The pipeline writes **Doc A** (column D) and **Doc B** (column E) score columns. Step-1 automated scores pre-fill rows 14–18 in both columns; rows 5–12 stay blank for faculty.
 
 Markdown reviewer briefings and agent reviews (from `python -m llm_score.cli`) are written to `briefings/`:
 

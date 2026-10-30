@@ -75,8 +75,8 @@ def _total_formula(column_letter: str) -> str:
 
 
 def _setup_reviewer_columns(ws: Worksheet) -> None:
-    ws.cell(row=ROW_SCORE_HEADERS, column=COL_DOC_A).value = "Reviewer A"
-    ws.cell(row=ROW_SCORE_HEADERS, column=COL_DOC_B).value = "Reviewer B"
+    ws.cell(row=ROW_SCORE_HEADERS, column=COL_DOC_A).value = "Doc A"
+    ws.cell(row=ROW_SCORE_HEADERS, column=COL_DOC_B).value = "Doc B"
     ws.cell(row=ROW_APPLICANT_NAME, column=COL_DOC_A).value = _total_formula("D")
     ws.cell(row=ROW_APPLICANT_NAME, column=COL_DOC_B).value = _total_formula("E")
 
@@ -221,7 +221,7 @@ def write_multi_applicant_workbook(
         ws.cell(row=ROW_APPLICANT_NAME, column=COL_APPLICANT_NAME).value = facts.applicant_name
         _fill_step1_scores(ws, scores)
         if agent_reviews and idx < len(agent_reviews):
-            doc_a, doc_b = agent_reviews[idx][0], agent_reviews[idx][1]
+            doc_a, doc_b = agent_reviews[idx]
             _fill_agent_review(ws, COL_DOC_A, doc_a)
             _fill_agent_review(ws, COL_DOC_B, doc_b)
 

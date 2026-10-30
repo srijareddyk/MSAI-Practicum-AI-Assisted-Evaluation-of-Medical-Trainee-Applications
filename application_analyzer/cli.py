@@ -20,8 +20,8 @@ def _project_root() -> Path:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=(
-            "Step 1 only (no LLM): extract institution and GPA signals from application PDFs "
-            "and write Excel worksheets with Reviewer A / Reviewer B score columns."
+            "Step 1 only (no LLM): extract quantifiable rubric fields from ERAS PDFs "
+            "and write Excel worksheets with Doc A / Doc B score columns."
         )
     )
     p.add_argument(

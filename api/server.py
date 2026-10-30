@@ -1,4 +1,4 @@
-"""FastAPI server for the MSAI master's application screening UI."""
+"""FastAPI server for the residency application screening UI."""
 
 from __future__ import annotations
 
@@ -22,8 +22,8 @@ UPLOAD_ROOT = ROOT / "api_data" / "jobs"
 FRONTEND_DIST = ROOT / "frontend" / "dist"
 
 app = FastAPI(
-    title="Northwestern MSAI Application Screening",
-    description="AI-assisted screening of MSAI master's application packets",
+    title="Northwestern Ophthalmology Application Screening",
+    description="AI-assisted evaluation of medical trainee applications",
     version="1.0.0",
 )
 

@@ -1,4 +1,4 @@
-"""Independent LLM screening agents for MSAI admissions."""
+"""Doc A and Doc B — independent LLM screening agents."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from llm_score.llm_client import DEFAULT_MODEL, call_model_json
-from llm_score.prompts import DOC_A_PROMPT, DOC_B_PROMPT, DOC_C_PROMPT
+from llm_score.prompts import DOC_A_PROMPT, DOC_B_PROMPT
 
 SCORE_KEYS = (
     "scientific_pursuits_education",
@@ -96,7 +96,7 @@ def run_doc_a(
         application_text=application_text,
         briefing_json=briefing_json,
     )
-    return _normalize_review("Reviewer A", raw)
+    return _normalize_review("Doc A", raw)
 
 
 def run_doc_b(
@@ -110,18 +110,4 @@ def run_doc_b(
         application_text=application_text,
         briefing_json=briefing_json,
     )
-    return _normalize_review("Reviewer B", raw)
-
-
-def run_doc_c(
-    application_text: str,
-    briefing_json: str,
-    model: str = DEFAULT_MODEL,
-) -> AgentReview:
-    raw = call_model_json(
-        DOC_C_PROMPT,
-        model=model,
-        application_text=application_text,
-        briefing_json=briefing_json,
-    )
-    return _normalize_review("Reviewer C", raw)
+    return _normalize_review("Doc B", raw)

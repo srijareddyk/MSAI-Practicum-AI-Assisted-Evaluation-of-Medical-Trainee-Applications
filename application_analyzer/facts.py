@@ -82,15 +82,6 @@ def _find_undergrad_block(text: str) -> str:
 
 
 def _find_undergrad_institution(text: str) -> str | None:
-    labeled = re.search(
-        r"Undergraduate institution\s*:\s*([^\n]+)",
-        text,
-        flags=re.I,
-    )
-    if labeled:
-        inst = re.sub(r"\s+", " ", labeled.group(1).strip())
-        if len(inst) > 4:
-            return inst[:200]
     m = re.search(
         r"Undergraduate\s*\n\s*education\s*\n\s*([^\n]+)",
         text,
@@ -222,10 +213,10 @@ def extract_facts_from_text(text: str, source: Path) -> ExtractedFacts:
     t, r = _extract_usmle_step1(text)
     facts.usmle_step1_times_taken = t
     facts.usmle_step1_result = r
-    if facts.medical_school is None and re.search(r"\bUSMLE\b|Medical\s+School", text, flags=re.I):
+    if facts.medical_school is None:
         facts.notes.append("Medical school not detected from coversheet; check PDF.")
     if facts.undergraduate_cum_gpa is None:
         facts.notes.append("Undergraduate cumulative GPA not detected; check transcript layout.")
-    if facts.usmle_step1_result is None and re.search(r"\bUSMLE\b", text, flags=re.I):
+    if facts.usmle_step1_result is None:
         facts.notes.append("USMLE Step 1 line not detected; check examinations section.")
     return facts

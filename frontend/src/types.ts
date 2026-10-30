@@ -46,7 +46,6 @@ export interface ApplicantResult {
   briefing: Record<string, unknown> | null
   doc_a: AgentReview | null
   doc_b: AgentReview | null
-  doc_c: AgentReview | null
   facts: ExtractedFacts
   scores: Step1Scores
   markdown_files: Record<string, string>

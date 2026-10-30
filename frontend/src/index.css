@@ -1,30 +1,36 @@
 :root {
-  --ink: #1c1424;
-  --slate: #4c4456;
-  --muted: #746c7c;
-  --line: #e3dcd0;
-  --paper: #f6f1e8;
-  --paper-2: #fffdf8;
-  --rail: #241433;
-  --rail-2: #321c48;
-  --purple: #4e2a84;
-  --purple-deep: #2b1744;
-  --gold: #9a7433;
-  --gold-soft: #f3e6c8;
-  --pass: #1d6b45;
-  --fail: #8d2e2e;
-  --rec-b: #8a6420;
-  --shadow: 0 24px 60px rgba(36, 20, 51, 0.12);
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-body: 'Outfit', system-ui, sans-serif;
-  --max: 1180px;
+  /* Northwestern University brand */
+  --nu-purple: #4e2a84;
+  --nu-purple-dark: #401f68;
+  --nu-purple-deep: #2b1748;
+  --nu-purple-mid: #836eaa;
+  --nu-purple-soft: #c7bdd8;
+  --nu-purple-wash: #ebe6f4;
+  --nu-ink: #1a1520;
+  --nu-slate: #4a4550;
+  --nu-muted: #716c6b;
+  --nu-line: #d9d4e0;
+  --nu-canvas: #f7f5fa;
+  --nu-white: #ffffff;
+  --nu-pass: #1f6b4a;
+  --nu-fail: #9b2c2c;
+  --nu-rec-a: #1f6b4a;
+  --nu-rec-b: #8a6d1b;
+  --nu-rec-c: #9b2c2c;
+
+  --font-display: 'Newsreader', 'Georgia', serif;
+  --font-body: 'Figtree', system-ui, sans-serif;
+
+  --shadow-soft: 0 18px 50px rgba(43, 23, 72, 0.12);
+  --radius: 14px;
+  --max: 1120px;
 
   font-family: var(--font-body);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  color: var(--ink);
-  background: var(--paper);
+  color: var(--nu-ink);
+  background: var(--nu-canvas);
 }
 
 *,
@@ -42,19 +48,26 @@ body,
 
 body {
   background:
-    radial-gradient(900px 420px at 100% -10%, rgba(78, 42, 132, 0.08), transparent 50%),
-    var(--paper);
+    radial-gradient(1200px 600px at 10% -10%, rgba(78, 42, 132, 0.18), transparent 55%),
+    radial-gradient(900px 500px at 95% 0%, rgba(131, 110, 170, 0.16), transparent 50%),
+    linear-gradient(180deg, #f3eff8 0%, var(--nu-canvas) 38%, #faf9fc 100%);
+  background-attachment: fixed;
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
 a {
-  color: var(--purple);
+  color: var(--nu-purple);
+}
+
+img {
+  max-width: 100%;
 }
 
 ::selection {
-  background: rgba(78, 42, 132, 0.18);
+  background: rgba(78, 42, 132, 0.22);
 }

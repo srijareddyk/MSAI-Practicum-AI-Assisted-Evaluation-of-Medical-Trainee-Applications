@@ -15,6 +15,7 @@ from application_analyzer.scoring import RubricScores, compute_scores
 from llm_score.brief import extract_reviewer_brief
 from llm_score.llm_client import DEFAULT_MODEL
 from llm_score.markdown_export import briefing_to_markdown, review_to_markdown
+from llm_score.redact import apply_identity_redactions, cloud_llm_enabled, redact_application_text
 from llm_score.reviewers import AgentReview, run_doc_a, run_doc_b, run_doc_c
 from llm_score.text_strip import strip_for_llm
 
@@ -127,6 +128,9 @@ def main(argv: list[str] | None = None) -> int:
 
         if not args.skip_llm:
             stripped = strip_for_llm(text)
+            if cloud_llm_enabled():
+                stripped, notes = redact_application_text(stripped, facts, pdf, harvest_from=text)
+                print(f"  Redacted identifiers locally ({', '.join(notes) or 'none matched'})")
             stripped_len = len(stripped)
             name = facts.applicant_name or pdf.name
             print(f"Briefing {name} ({stripped_len} chars)...")
@@ -142,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
 
             if not args.skip_agents:
                 briefing_json = json.dumps(brief, indent=2, ensure_ascii=False)
+                if cloud_llm_enabled():
+                    briefing_json, _ = apply_identity_redactions(briefing_json, facts, pdf, harvest_from=text)
                 print(f"  Doc A reviewing {name}...")
                 doc_a = run_doc_a(stripped, briefing_json, model=args.model)
                 doc_a_path = briefings_dir / _safe_md_filename(facts.applicant_name, pdf, "_doc_a")

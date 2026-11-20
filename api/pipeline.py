@@ -16,6 +16,7 @@ from llm_score.brief import extract_reviewer_brief
 from llm_score.components import combine_opinions, is_synthetic_demo_packet, run_component
 from llm_score.llm_client import DEFAULT_MODEL, render_user_prompt, tighten_text
 from llm_score.markdown_export import briefing_to_markdown, review_to_markdown
+from llm_score.redact import apply_identity_redactions, cloud_llm_enabled, redact_application_text
 from llm_score.prompts import BRIEF_PROMPT, DOC_A_PROMPT, DOC_B_PROMPT, DOC_C_PROMPT
 from llm_score.reviewers import AgentReview, run_doc_a, run_doc_b, run_doc_c
 from llm_score.text_strip import strip_for_llm
@@ -99,9 +100,19 @@ def run_pipeline(
         components: list[dict[str, Any]] = []
         combined: dict[str, str] | None = None
 
+        redaction_notes: list[str] = []
+
+        def llm_excerpt() -> str:
+            """Text for the model. Identifiers are scrubbed locally first for hosted models."""
+            excerpt = tighten_text(strip_for_llm(text))
+            if cloud_llm_enabled():
+                emit("redacting", index=index, total=total, file=pdf.name)
+                excerpt, notes = redact_application_text(excerpt, facts, pdf, harvest_from=text)
+                redaction_notes.extend(notes)
+            return excerpt
+
         if agent_ids:
-            stripped = strip_for_llm(text)
-            excerpt = tighten_text(stripped)
+            excerpt = llm_excerpt()
             stripped_len = len(excerpt)
             prompts_sent["application_excerpt"] = excerpt
             name = facts.applicant_name or pdf.name
@@ -119,8 +130,7 @@ def run_pipeline(
                 )
             combined = combine_opinions(components)
         elif not skip_llm:
-            stripped = strip_for_llm(text)
-            excerpt = tighten_text(stripped)
+            excerpt = llm_excerpt()
             stripped_len = len(excerpt)
             prompts_sent["application_excerpt"] = excerpt
             name = facts.applicant_name or pdf.name
@@ -138,6 +148,8 @@ def run_pipeline(
 
             if not skip_agents:
                 briefing_json = json.dumps(brief, indent=2, ensure_ascii=False)
+                if cloud_llm_enabled():
+                    briefing_json, _ = apply_identity_redactions(briefing_json, facts, pdf, harvest_from=text)
                 emit("doc_a", index=index, total=total, applicant=name)
                 prompts_sent["doc_a"] = render_user_prompt(
                     DOC_A_PROMPT, application_text=excerpt, briefing_json=briefing_json
@@ -180,6 +192,8 @@ def run_pipeline(
                 "file": pdf.name,
                 "applicant_name": facts.applicant_name,
                 "stripped_chars": stripped_len,
+                "redacted_for_llm": bool(redaction_notes) or (stripped_len > 0 and cloud_llm_enabled()),
+                "redaction_notes": redaction_notes,
                 "briefing": brief,
                 "doc_a": _agent_to_dict(doc_a),
                 "doc_b": _agent_to_dict(doc_b),

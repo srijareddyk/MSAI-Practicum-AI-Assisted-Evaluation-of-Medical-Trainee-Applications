@@ -32,6 +32,10 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:8b")
 DEFAULT_MODEL = GEMINI_MODEL if LLM_PROVIDER == "gemini" else OLLAMA_MODEL
 
+# llm_score.redact puts this at the top of every redacted payload. Hosted
+# providers refuse any prompt without it, so un-redacted text never leaves.
+REDACTION_MARKER = "[IDENTIFIERS REDACTED LOCALLY]"
+
 THINK = False
 KEEP_ALIVE = "15m"
 NUM_CTX = 4096
@@ -165,6 +169,8 @@ def call_model_json(
 ) -> dict[str, Any]:
     content = render_user_prompt(prompt_template, **format_vars)
     if LLM_PROVIDER == "gemini":
+        if REDACTION_MARKER not in content:
+            return {"error": "Blocked: application text was not redacted, so nothing was sent to Gemini."}
         return _call_gemini_json(content, model, temperature=temperature, max_tokens=max_tokens)
     return _call_ollama_json(content, model, temperature=temperature, max_tokens=max_tokens)
 

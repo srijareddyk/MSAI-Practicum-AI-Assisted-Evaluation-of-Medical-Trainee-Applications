@@ -50,7 +50,7 @@ The twelve packet texts are also copied at the bottom of this file.
 2. **Factual brief (1 model call)** — extraction only, no score
 3. **Three readers (3 model calls)** — Reviewer A (technical readiness), Reviewer B (program fit), Reviewer C (academic record)
 
-All model calls run **locally via Ollama**. Applicant text is not sent to a cloud API.
+Model calls go to **Google Gemini** when `GEMINI_API_KEY` is set in `.env` (see `.env.example`), or to local Ollama with `LLM_PROVIDER=ollama`. Before anything is sent to Gemini, identifiers are removed on this machine (see Privacy below).
 
 Reviewer A, B, and C use the same score scale and different emphasis. A majority A is an interview suggestion. A majority C is a suggestion not to advance. Faculty still decide.
 
@@ -77,6 +77,9 @@ The frontend is the admissions review screen. It talks to a FastAPI backend that
 
 ## Privacy and data handling (important)
 
+- **Redaction before Gemini.** `llm_score/redact.py` runs locally on every packet before a hosted model sees it. It replaces the applicant's name, letter writers' names, addresses, emails, phones, dates of birth, AAMC/ERAS/USMLE IDs and URLs with placeholders such as `[APPLICANT]`, `[PERSON]` and `[ADDRESS]`. Rule-based scoring still reads the original text locally.
+- **Fail closed.** `llm_client.py` refuses to send any prompt to Gemini that has not been through redaction, and redaction cannot be switched off for hosted providers. The Developer tab shows the exact redacted text each agent received.
+- Redaction is pattern-based, not a legal FERPA guarantee. School names, publication titles, and unusual career details can still point to a person, so check with your program before uploading real packets.
 - These PDFs contain **identifying education records**. Store them on **encrypted drives**, limit access to reviewers, and follow your institution's **FERPA** policies.
 - The tool writes **Excel summaries**; treat outputs like source PDFs. Do not commit real applicant PDFs or filled rubrics to public repositories.
 - Logs: use `--json` for structured extraction details; redirect to a secure location if needed.

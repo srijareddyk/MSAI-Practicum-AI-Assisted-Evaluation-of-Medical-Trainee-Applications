@@ -63,7 +63,7 @@ function Dropzone({
             +
           </div>
           <h3>{files.length ? 'Add another PDF' : 'Upload a residency packet'}</h3>
-          <p>PDF only. The review runs on this computer with the local model.</p>
+          <p>PDF only. Packets are read on this computer; the review agents call the configured model.</p>
           <input
             ref={inputRef}
             className="hidden-input"
@@ -161,12 +161,14 @@ export default function App() {
   const focused = readerById(focusId) || READERS[0]
 
   const statusLabel = useMemo(() => {
-    if (!health) return 'Checking local services'
+    if (!health) return 'Checking services'
     if (!apiOk) return 'API offline'
     if (!health.template_present) return 'Rubric workbook missing'
-    if (!health.ollama.ok) return 'Ollama unreachable'
-    if (!health.ollama.available) return `Pull ${health.default_model} first`
-    return 'Ready on this machine'
+    const gemini = health.provider === 'gemini'
+    if (!health.ollama.ok) return gemini ? 'Gemini unreachable — check API key' : 'Ollama unreachable'
+    if (!health.ollama.available)
+      return gemini ? `${health.default_model} not available for this key` : `Pull ${health.default_model} first`
+    return gemini ? `Ready · Gemini ${health.default_model}` : 'Ready on this machine'
   }, [health, apiOk])
 
   const toggleReader = useCallback((id: string) => {
@@ -330,7 +332,7 @@ export default function App() {
                 <Dropzone files={files} onFiles={setFiles} />
                 <div className="controls">
                   <div className="field">
-                    <label htmlFor="model">Local model</label>
+                    <label htmlFor="model">Model</label>
                     <input
                       id="model"
                       type="text"

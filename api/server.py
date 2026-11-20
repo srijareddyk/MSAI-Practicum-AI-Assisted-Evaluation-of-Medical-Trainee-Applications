@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from api.pipeline import project_root, run_pipeline
 from llm_score.components import READERS_BY_ID
-from llm_score.llm_client import DEFAULT_MODEL, generation_settings
+from llm_score.llm_client import DEFAULT_MODEL, LLM_PROVIDER, check_llm, generation_settings
 from llm_score.prompts import prompt_catalog
 
 ROOT = project_root()
@@ -60,22 +60,6 @@ def _update_job(job_id: str, **fields: Any) -> None:
         job["updated_at"] = _now()
 
 
-def _check_ollama(model: str) -> dict[str, Any]:
-    try:
-        import ollama
-
-        models = ollama.list()
-        names: list[str] = []
-        for m in models.get("models", []):
-            name = m.get("model") or m.get("name") or ""
-            if name:
-                names.append(name)
-        available = any(model in n or n.startswith(f"{model}:") or n == model for n in names)
-        return {"ok": True, "available": available, "models": names, "requested": model}
-    except Exception as exc:  # noqa: BLE001 — surface status to UI
-        return {"ok": False, "available": False, "error": str(exc), "requested": model}
-
-
 @app.get("/api/dev/prompts")
 def dev_prompts() -> dict[str, Any]:
     catalog = prompt_catalog()
@@ -86,12 +70,13 @@ def dev_prompts() -> dict[str, Any]:
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     template = ROOT / "rubric" / "template.xlsx"
-    ollama_status = _check_ollama(DEFAULT_MODEL)
+    llm_status = check_llm(DEFAULT_MODEL)
     return {
         "status": "ok",
         "template_present": template.is_file(),
         "default_model": DEFAULT_MODEL,
-        "ollama": ollama_status,
+        "provider": LLM_PROVIDER,
+        "ollama": llm_status,  # kept under this key for UI compatibility
     }
 
 

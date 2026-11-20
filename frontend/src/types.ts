@@ -6,7 +6,9 @@ export interface HealthResponse {
   status: string
   template_present: boolean
   default_model: string
+  provider?: string
   ollama: {
+    provider?: string
     ok: boolean
     available: boolean
     models?: string[]
@@ -81,6 +83,7 @@ export interface PromptCatalog {
   rubric: string
   generation: {
     model: string
+    provider?: string
     think: boolean
     keep_alive: string
     num_ctx: number

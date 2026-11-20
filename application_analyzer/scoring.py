@@ -256,20 +256,17 @@ def compute_scores(
     full_text: str,
     school_list_path: str | None = None,
 ) -> RubricScores:
+    del full_text  # Master's review does not score clerkships or exam reports.
     cfg = load_school_lists(Path(school_list_path) if school_list_path else None)
-    med_top = cfg.get("medical_school_top25") or []
     ug_top = cfg.get("undergraduate_top25") or []
 
-    msq = 4 if is_top_school(facts.medical_school, med_top) else 0
     uq = 2 if is_top_school(facts.undergraduate_institution, ug_top) else 0
     up = score_undergraduate_performance(facts.undergraduate_cum_gpa)
-    usmle = score_usmle_step1(facts)
-    msp = score_medical_school_performance(full_text, facts.medical_school, cfg)
 
     return RubricScores(
-        medical_school_quality=msq,
-        medical_school_performance=msp,
+        medical_school_quality=None,
+        medical_school_performance=None,
         undergraduate_quality=uq,
         undergraduate_performance=up,
-        usmle_step1=usmle,
+        usmle_step1=None,
     )

@@ -66,6 +66,8 @@ def _coerce_recommendation(value: Any) -> str | None:
 def _normalize_review(agent_name: str, raw: dict[str, Any]) -> AgentReview:
     if not raw:
         return AgentReview(agent_name=agent_name, error="Model returned no parseable JSON")
+    if raw.get("error") and not raw.get("scores"):
+        return AgentReview(agent_name=agent_name, error=str(raw["error"]))
 
     scores_in = raw.get("scores") or {}
     rationale = {k: str(v) for k, v in (raw.get("rationale") or {}).items() if v}
@@ -93,6 +95,7 @@ def run_doc_a(
     raw = call_model_json(
         DOC_A_PROMPT,
         model=model,
+        max_tokens=600,
         application_text=application_text,
         briefing_json=briefing_json,
     )
@@ -107,6 +110,7 @@ def run_doc_b(
     raw = call_model_json(
         DOC_B_PROMPT,
         model=model,
+        max_tokens=600,
         application_text=application_text,
         briefing_json=briefing_json,
     )
@@ -121,6 +125,7 @@ def run_doc_c(
     raw = call_model_json(
         DOC_C_PROMPT,
         model=model,
+        max_tokens=600,
         application_text=application_text,
         briefing_json=briefing_json,
     )

@@ -16,19 +16,14 @@ export interface HealthResponse {
 }
 
 export interface Step1Scores {
-  medical_school_quality: number | null
-  medical_school_performance: number | null
   undergraduate_quality: number | null
   undergraduate_performance: number | null
-  usmle_step1: string | null
 }
 
 export interface ExtractedFacts {
-  medical_school: string | null
   undergraduate_institution: string | null
   undergraduate_cum_gpa: number | null
-  usmle_step1_times_taken: number | null
-  usmle_step1_result: string | null
+  work_experience: string | null
   notes: string[]
 }
 
@@ -37,6 +32,24 @@ export interface AgentReview {
   scores: Record<string, number | string | null>
   rationale: Record<string, string>
   error: string | null
+}
+
+export type Opinion = 'green' | 'yellow' | 'red' | 'split'
+
+export interface ComponentRead {
+  id: string
+  title: string
+  short: string
+  opinion: Opinion | null
+  headline: string | null
+  evidence: string[]
+  concern: string | null
+  error: string | null
+}
+
+export interface CombinedRead {
+  opinion: Opinion
+  summary: string
 }
 
 export interface ApplicantResult {
@@ -50,6 +63,37 @@ export interface ApplicantResult {
   facts: ExtractedFacts
   scores: Step1Scores
   markdown_files: Record<string, string>
+  prompts_sent?: Record<string, string>
+  components?: ComponentRead[]
+  combined?: CombinedRead | null
+}
+
+export interface PromptSpec {
+  id: string
+  title: string
+  audience: string
+  max_tokens: number
+  variables: string[]
+  template: string
+}
+
+export interface PromptCatalog {
+  rubric: string
+  generation: {
+    model: string
+    think: boolean
+    keep_alive: string
+    num_ctx: number
+    repeat_last_n: number
+    json_mode: boolean
+    attempts: {
+      temperature: number
+      repeat_penalty: number
+      num_predict: string
+      when?: string
+    }[]
+  }
+  prompts: PromptSpec[]
 }
 
 export interface JobProgress {

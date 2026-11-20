@@ -147,22 +147,37 @@ def _strip_original_sheets(wb: Workbook, original_names: list[str]) -> None:
             wb.remove(wb[name])
 
 
+def _clear_clinical_rows(ws: Worksheet) -> None:
+    """Drop medical school, clerkship, and USMLE rows from the copied worksheet."""
+    for row in (
+        ROW_RUBRIC_ROWS["medical_school_quality"],
+        ROW_RUBRIC_ROWS["medical_school_performance"],
+        ROW_RUBRIC_ROWS["usmle_step1"],
+    ):
+        for col in range(1, 20):
+            cell = ws.cell(row=row, column=col)
+            cell.value = None
+            cell.fill = PatternFill(fill_type=None)
+    for col in (COL_SUMMARY["msq"], COL_SUMMARY["msp"], COL_SUMMARY["usmle"]):
+        cell = ws.cell(row=ROW_TOTAL_BAND, column=col)
+        cell.value = None
+        cell.fill = PatternFill(fill_type=None)
+
+
 def _fill_step1_scores(ws: Worksheet, scores: RubricScores) -> None:
-    _set_automated_score(ws, ROW_RUBRIC_ROWS["medical_school_quality"], scores.medical_school_quality)
-    _set_automated_score(
-        ws, ROW_RUBRIC_ROWS["medical_school_performance"], scores.medical_school_performance
-    )
+    _clear_clinical_rows(ws)
     _set_automated_score(ws, ROW_RUBRIC_ROWS["undergraduate_quality"], scores.undergraduate_quality)
     _set_automated_score(
         ws, ROW_RUBRIC_ROWS["undergraduate_performance"], scores.undergraduate_performance
     )
-    _set_automated_score(ws, ROW_RUBRIC_ROWS["usmle_step1"], scores.usmle_step1)
-
-    _set_summary_cell(ws, COL_SUMMARY["msq"], scores.medical_school_quality)
-    _set_summary_cell(ws, COL_SUMMARY["msp"], scores.medical_school_performance)
     _set_summary_cell(ws, COL_SUMMARY["uq"], scores.undergraduate_quality)
     _set_summary_cell(ws, COL_SUMMARY["up"], scores.undergraduate_performance)
-    _set_summary_cell(ws, COL_SUMMARY["usmle"], scores.usmle_step1)
+
+
+def _write_work_experience(ws: Worksheet, facts: ExtractedFacts) -> None:
+    ws.cell(row=ROW_RUBRIC_ROWS["medical_school_quality"], column=1).value = "Work experience"
+    if facts.work_experience:
+        ws.cell(row=ROW_RUBRIC_ROWS["medical_school_quality"], column=2).value = facts.work_experience
 
 
 def write_workbook(
@@ -189,6 +204,7 @@ def write_workbook(
 
     ws.cell(row=ROW_APPLICANT_NAME, column=COL_APPLICANT_NAME).value = facts.applicant_name
     _fill_step1_scores(ws, scores)
+    _write_work_experience(ws, facts)
     _fill_agent_review(ws, COL_DOC_A, doc_a)
     _fill_agent_review(ws, COL_DOC_B, doc_b)
 
@@ -220,6 +236,7 @@ def write_multi_applicant_workbook(
         _setup_reviewer_columns(ws)
         ws.cell(row=ROW_APPLICANT_NAME, column=COL_APPLICANT_NAME).value = facts.applicant_name
         _fill_step1_scores(ws, scores)
+        _write_work_experience(ws, facts)
         if agent_reviews and idx < len(agent_reviews):
             doc_a, doc_b = agent_reviews[idx][0], agent_reviews[idx][1]
             _fill_agent_review(ws, COL_DOC_A, doc_a)

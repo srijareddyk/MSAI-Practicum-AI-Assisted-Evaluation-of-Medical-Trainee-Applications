@@ -15,7 +15,7 @@ For each section:
 - List concrete evidence (short quotes or paraphrases with section names).
 - If information is missing, say "Not found in application" — do not infer.
 
-The application is a master's packet: statement of purpose, education, research, projects, experience, and letters. There is no residency or clinical training to extract.
+The application is a master's packet: statement of purpose, education, research, projects, work experience, and letters.
 
 Application excerpt:
 {application_text}
@@ -126,8 +126,6 @@ Be conservative: award a score only when the criterion is clearly met.
 
 You will receive a factual briefing and the application excerpt.
 Use both, but check claims against the excerpt. Do not copy the briefing blindly.
-Ignore clinical, USMLE, and residency framing. This is a master's application.
-
 """
     + _RUBRIC_SCORING_RULES
     + """
@@ -174,8 +172,6 @@ Be conservative: award a score only when the criterion is clearly met.
 
 You review independently from Reviewer A. You will receive the same factual briefing and application excerpt.
 Use both, but check claims against the excerpt. Do not copy the briefing blindly.
-Ignore clinical, USMLE, and residency framing. This is a master's application.
-
 """
     + _RUBRIC_SCORING_RULES
     + """
@@ -222,8 +218,6 @@ Be conservative: award a score only when the criterion is clearly met.
 
 You review independently from Reviewer A and Reviewer B. You will receive the same factual briefing and application excerpt.
 Use both, but check claims against the excerpt. Do not copy the briefing blindly.
-Ignore clinical, USMLE, and residency framing. This is a master's application.
-
 """
     + _RUBRIC_SCORING_RULES
     + """
@@ -261,3 +255,10 @@ Output JSON only:
   }}
 }}"""
 )
+
+
+def prompt_catalog() -> dict[str, object]:
+    """Component-reader prompts shown on the developer tab."""
+    from llm_score.components import prompt_catalog as component_catalog
+
+    return component_catalog()

@@ -195,19 +195,14 @@ def main(argv: list[str] | None = None) -> int:
                     "error": doc_c.error,
                 },
                 "facts": {
-                    "medical_school": facts.medical_school,
                     "undergraduate_institution": facts.undergraduate_institution,
                     "undergraduate_cum_gpa": facts.undergraduate_cum_gpa,
-                    "usmle_step1_times_taken": facts.usmle_step1_times_taken,
-                    "usmle_step1_result": facts.usmle_step1_result,
+                    "work_experience": facts.work_experience,
                     "notes": facts.notes,
                 },
                 "scores": {
-                    "medical_school_quality": scores.medical_school_quality,
-                    "medical_school_performance": scores.medical_school_performance,
                     "undergraduate_quality": scores.undergraduate_quality,
                     "undergraduate_performance": scores.undergraduate_performance,
-                    "usmle_step1": scores.usmle_step1,
                 },
             }
         )

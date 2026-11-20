@@ -15,7 +15,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from api.pipeline import project_root, run_pipeline
-from llm_score.llm_client import DEFAULT_MODEL
+from llm_score.components import READERS_BY_ID
+from llm_score.llm_client import DEFAULT_MODEL, generation_settings
+from llm_score.prompts import prompt_catalog
 
 ROOT = project_root()
 UPLOAD_ROOT = ROOT / "api_data" / "jobs"
@@ -29,7 +31,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8010",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,6 +76,13 @@ def _check_ollama(model: str) -> dict[str, Any]:
         return {"ok": False, "available": False, "error": str(exc), "requested": model}
 
 
+@app.get("/api/dev/prompts")
+def dev_prompts() -> dict[str, Any]:
+    catalog = prompt_catalog()
+    catalog["generation"] = {"model": DEFAULT_MODEL, **generation_settings()}
+    return catalog
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     template = ROOT / "rubric" / "template.xlsx"
@@ -87,6 +101,7 @@ def _run_job(
     job_dir: Path,
     model: str,
     mode: str,
+    agent_ids: list[str] | None,
 ) -> None:
     skip_llm = mode == "step1"
     skip_agents = mode == "briefing"
@@ -102,6 +117,7 @@ def _run_job(
             skip_llm=skip_llm,
             skip_agents=skip_agents,
             on_progress=on_progress,
+            agent_ids=agent_ids,
         )
         _update_job(
             job_id,
@@ -120,11 +136,18 @@ async def analyze(
     files: list[UploadFile] = File(...),
     mode: str = Form("full"),
     model: str = Form(DEFAULT_MODEL),
+    agents: str = Form(""),
 ) -> dict[str, Any]:
     if not files:
         raise HTTPException(400, "Upload at least one PDF")
     if mode not in {"full", "briefing", "step1"}:
         raise HTTPException(400, "mode must be full, briefing, or step1")
+    agent_ids = [part.strip() for part in agents.split(",") if part.strip()]
+    unknown = [agent_id for agent_id in agent_ids if agent_id not in READERS_BY_ID]
+    if unknown:
+        raise HTTPException(400, f"Unknown reader: {', '.join(unknown)}")
+    if agent_ids and len(agent_ids) < 2:
+        raise HTTPException(400, "Pick at least two readers")
 
     for f in files:
         if not (f.filename or "").lower().endswith(".pdf"):
@@ -156,6 +179,7 @@ async def analyze(
             "progress": {},
             "mode": mode,
             "model": model,
+            "agents": agent_ids,
             "files": saved_names,
             "applicants": [],
             "excel_name": None,
@@ -167,12 +191,91 @@ async def analyze(
 
     thread = threading.Thread(
         target=_run_job,
-        args=(job_id, pdf_paths, job_dir, model, mode),
+        args=(job_id, pdf_paths, job_dir, model, mode, agent_ids or None),
         daemon=True,
     )
     thread.start()
 
     return {"job_id": job_id, "status": "running", "files": saved_names}
+
+
+def _packet_label(filename: str) -> str:
+    stem = filename.split("_AU")[0]
+    if ",_" in stem:
+        last, first = stem.split(",_", 1)
+        return f"{first.replace('_', ' ')} {last.replace('_', ' ')}"
+    return stem.replace("_", " ")
+
+
+def _local_packet_paths() -> list[Path]:
+    root = ROOT.resolve()
+    found: list[Path] = []
+    for path in sorted(root.glob("*_OPHTH-R_2025-26.pdf")):
+        resolved = path.resolve()
+        if resolved.parent == root and resolved.is_file():
+            found.append(resolved)
+    return found
+
+
+@app.get("/api/local-packets")
+def local_packets() -> dict[str, Any]:
+    return {
+        "packets": [{"file": path.name, "label": _packet_label(path.name)} for path in _local_packet_paths()]
+    }
+
+
+@app.post("/api/analyze-local")
+def analyze_local(
+    packets: str = Form(...),
+    mode: str = Form("full"),
+    model: str = Form(DEFAULT_MODEL),
+    agents: str = Form(""),
+) -> dict[str, Any]:
+    if mode not in {"full", "briefing", "step1"}:
+        raise HTTPException(400, "mode must be full, briefing, or step1")
+    agent_ids = [part.strip() for part in agents.split(",") if part.strip()]
+    unknown = [agent_id for agent_id in agent_ids if agent_id not in READERS_BY_ID]
+    if unknown:
+        raise HTTPException(400, f"Unknown reader: {', '.join(unknown)}")
+    if len(agent_ids) < 2:
+        raise HTTPException(400, "Pick at least two readers")
+
+    available = {path.name: path for path in _local_packet_paths()}
+    requested = [part.strip() for part in packets.split("|") if part.strip()]
+    if not requested:
+        raise HTTPException(400, "Pick at least one application")
+    missing = [name for name in requested if name not in available]
+    if missing:
+        raise HTTPException(404, "That application is not on this machine")
+
+    pdf_paths = [available[name] for name in requested]
+    job_id = uuid.uuid4().hex[:12]
+    job_dir = UPLOAD_ROOT / job_id
+    job_dir.mkdir(parents=True, exist_ok=True)
+    with _lock:
+        _jobs[job_id] = {
+            "id": job_id,
+            "status": "running",
+            "stage": "queued",
+            "progress": {},
+            "mode": mode,
+            "model": model,
+            "agents": agent_ids,
+            "files": requested,
+            "applicants": [],
+            "excel_name": None,
+            "error": None,
+            "created_at": _now(),
+            "updated_at": _now(),
+            "job_dir": str(job_dir),
+        }
+    thread = threading.Thread(
+        target=_run_job,
+        args=(job_id, pdf_paths, job_dir, model, mode, agent_ids),
+        daemon=True,
+    )
+    thread.start()
+    return {"job_id": job_id, "status": "running", "files": requested}
 
 
 @app.get("/api/jobs/{job_id}")

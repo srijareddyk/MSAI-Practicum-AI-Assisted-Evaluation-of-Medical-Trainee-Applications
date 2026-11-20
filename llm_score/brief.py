@@ -13,6 +13,7 @@ def extract_reviewer_brief(application_text: str, model: str = DEFAULT_MODEL) ->
     data = call_model_json(
         BRIEF_PROMPT,
         model=model,
+        max_tokens=900,
         application_text=application_text,
     )
     if not data:

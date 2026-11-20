@@ -14,6 +14,7 @@ class ExtractedFacts:
     medical_school: str | None = None
     undergraduate_institution: str | None = None
     undergraduate_cum_gpa: float | None = None
+    work_experience: str | None = None
     usmle_step1_times_taken: int | None = None
     usmle_step1_result: str | None = None  # Pass | Fail | Unknown
     notes: list[str] = field(default_factory=list)
@@ -213,19 +214,32 @@ def _applicant_from_pdf(text: str) -> str | None:
     return None
 
 
+_WORK_HEADING = re.compile(r"(?:WORK|PROFESSIONAL)\s+EXPERIENCE\s*\n", re.I)
+_NEXT_HEADING = re.compile(
+    r"\n(?:HONORS(?:\s+AND\s+AWARDS)?|LETTERS OF RECOMMENDATION|PUBLICATIONS|EDUCATION|RESEARCH|PROJECTS|STATEMENT OF PURPOSE)\b",
+    re.I,
+)
+
+
+def _extract_work_experience(text: str) -> str | None:
+    match = _WORK_HEADING.search(text)
+    if not match:
+        return None
+    rest = text[match.end() :]
+    end = _NEXT_HEADING.search(rest)
+    body = rest[: end.start()] if end else rest
+    lines = [re.sub(r"\s+", " ", line).strip() for line in body.splitlines() if line.strip()]
+    if not lines:
+        return None
+    return " ".join(lines)[:500]
+
+
 def extract_facts_from_text(text: str, source: Path) -> ExtractedFacts:
     facts = ExtractedFacts(source_path=str(source))
     facts.applicant_name = _applicant_from_pdf(text) or _name_from_filename(source)
-    facts.medical_school = _find_medical_school(text)
     facts.undergraduate_institution = _find_undergrad_institution(text)
     facts.undergraduate_cum_gpa = _extract_undergrad_gpa(text)
-    t, r = _extract_usmle_step1(text)
-    facts.usmle_step1_times_taken = t
-    facts.usmle_step1_result = r
-    if facts.medical_school is None and re.search(r"\bUSMLE\b|Medical\s+School", text, flags=re.I):
-        facts.notes.append("Medical school not detected from coversheet; check PDF.")
+    facts.work_experience = _extract_work_experience(text)
     if facts.undergraduate_cum_gpa is None:
         facts.notes.append("Undergraduate cumulative GPA not detected; check transcript layout.")
-    if facts.usmle_step1_result is None and re.search(r"\bUSMLE\b", text, flags=re.I):
-        facts.notes.append("USMLE Step 1 line not detected; check examinations section.")
     return facts

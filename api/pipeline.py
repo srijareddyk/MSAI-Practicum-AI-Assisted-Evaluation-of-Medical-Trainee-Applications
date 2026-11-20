@@ -13,8 +13,10 @@ from application_analyzer.facts import ExtractedFacts, extract_facts_from_text
 from application_analyzer.pdf_extract import extract_text_from_pdf
 from application_analyzer.scoring import RubricScores, compute_scores
 from llm_score.brief import extract_reviewer_brief
-from llm_score.llm_client import DEFAULT_MODEL
+from llm_score.components import combine_opinions, is_synthetic_demo_packet, run_component
+from llm_score.llm_client import DEFAULT_MODEL, render_user_prompt, tighten_text
 from llm_score.markdown_export import briefing_to_markdown, review_to_markdown
+from llm_score.prompts import BRIEF_PROMPT, DOC_A_PROMPT, DOC_B_PROMPT, DOC_C_PROMPT
 from llm_score.reviewers import AgentReview, run_doc_a, run_doc_b, run_doc_c
 from llm_score.text_strip import strip_for_llm
 
@@ -59,6 +61,7 @@ def run_pipeline(
     skip_agents: bool = False,
     school_list: Path | None = None,
     on_progress: ProgressCallback | None = None,
+    agent_ids: list[str] | None = None,
 ) -> PipelineResult:
     root = project_root()
     template_path = template or (root / "rubric" / "template.xlsx")
@@ -92,13 +95,38 @@ def run_pipeline(
         doc_c: AgentReview | None = None
         stripped_len = 0
         markdown_files: dict[str, str] = {}
+        prompts_sent: dict[str, str] = {}
+        components: list[dict[str, Any]] = []
+        combined: dict[str, str] | None = None
 
-        if not skip_llm:
+        if agent_ids:
             stripped = strip_for_llm(text)
-            stripped_len = len(stripped)
+            excerpt = tighten_text(stripped)
+            stripped_len = len(excerpt)
+            prompts_sent["application_excerpt"] = excerpt
+            name = facts.applicant_name or pdf.name
+            synthetic_demo = is_synthetic_demo_packet(pdf.name)
+            for agent_id in agent_ids:
+                emit(agent_id, index=index, total=total, applicant=name)
+                components.append(
+                    run_component(
+                        agent_id,
+                        excerpt,
+                        model=model,
+                        prompts_sent=prompts_sent,
+                        synthetic_demo=synthetic_demo,
+                    )
+                )
+            combined = combine_opinions(components)
+        elif not skip_llm:
+            stripped = strip_for_llm(text)
+            excerpt = tighten_text(stripped)
+            stripped_len = len(excerpt)
+            prompts_sent["application_excerpt"] = excerpt
             name = facts.applicant_name or pdf.name
             emit("briefing", index=index, total=total, applicant=name)
-            brief = extract_reviewer_brief(stripped, model=model)
+            prompts_sent["brief"] = render_user_prompt(BRIEF_PROMPT, application_text=excerpt)
+            brief = extract_reviewer_brief(excerpt, model=model)
             brief_md = briefing_to_markdown(
                 facts.applicant_name or pdf.stem,
                 brief,
@@ -111,7 +139,10 @@ def run_pipeline(
             if not skip_agents:
                 briefing_json = json.dumps(brief, indent=2, ensure_ascii=False)
                 emit("doc_a", index=index, total=total, applicant=name)
-                doc_a = run_doc_a(stripped, briefing_json, model=model)
+                prompts_sent["doc_a"] = render_user_prompt(
+                    DOC_A_PROMPT, application_text=excerpt, briefing_json=briefing_json
+                )
+                doc_a = run_doc_a(excerpt, briefing_json, model=model)
                 doc_a_path = briefings_dir / _safe_md_filename(facts.applicant_name, pdf, "_doc_a")
                 doc_a_path.write_text(
                     review_to_markdown(facts.applicant_name or pdf.stem, doc_a, source_file=pdf.name),
@@ -120,7 +151,10 @@ def run_pipeline(
                 markdown_files["doc_a"] = doc_a_path.name
 
                 emit("doc_b", index=index, total=total, applicant=name)
-                doc_b = run_doc_b(stripped, briefing_json, model=model)
+                prompts_sent["doc_b"] = render_user_prompt(
+                    DOC_B_PROMPT, application_text=excerpt, briefing_json=briefing_json
+                )
+                doc_b = run_doc_b(excerpt, briefing_json, model=model)
                 doc_b_path = briefings_dir / _safe_md_filename(facts.applicant_name, pdf, "_doc_b")
                 doc_b_path.write_text(
                     review_to_markdown(facts.applicant_name or pdf.stem, doc_b, source_file=pdf.name),
@@ -129,7 +163,10 @@ def run_pipeline(
                 markdown_files["doc_b"] = doc_b_path.name
 
                 emit("doc_c", index=index, total=total, applicant=name)
-                doc_c = run_doc_c(stripped, briefing_json, model=model)
+                prompts_sent["doc_c"] = render_user_prompt(
+                    DOC_C_PROMPT, application_text=excerpt, briefing_json=briefing_json
+                )
+                doc_c = run_doc_c(excerpt, briefing_json, model=model)
                 doc_c_path = briefings_dir / _safe_md_filename(facts.applicant_name, pdf, "_doc_c")
                 doc_c_path.write_text(
                     review_to_markdown(facts.applicant_name or pdf.stem, doc_c, source_file=pdf.name),
@@ -148,21 +185,19 @@ def run_pipeline(
                 "doc_b": _agent_to_dict(doc_b),
                 "doc_c": _agent_to_dict(doc_c),
                 "facts": {
-                    "medical_school": facts.medical_school,
                     "undergraduate_institution": facts.undergraduate_institution,
                     "undergraduate_cum_gpa": facts.undergraduate_cum_gpa,
-                    "usmle_step1_times_taken": facts.usmle_step1_times_taken,
-                    "usmle_step1_result": facts.usmle_step1_result,
+                    "work_experience": facts.work_experience,
                     "notes": facts.notes,
                 },
                 "scores": {
-                    "medical_school_quality": scores.medical_school_quality,
-                    "medical_school_performance": scores.medical_school_performance,
                     "undergraduate_quality": scores.undergraduate_quality,
                     "undergraduate_performance": scores.undergraduate_performance,
-                    "usmle_step1": scores.usmle_step1,
                 },
                 "markdown_files": markdown_files,
+                "prompts_sent": prompts_sent,
+                "components": components,
+                "combined": combined,
             }
         )
         emit("applicant_done", index=index, total=total, applicant=facts.applicant_name or pdf.name)

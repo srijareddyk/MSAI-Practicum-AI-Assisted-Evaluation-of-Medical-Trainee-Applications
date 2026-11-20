@@ -13,6 +13,8 @@ output/
 briefings/
 eval/runs/
 applications/*.pdf
+*_OPHTH-R_*.pdf
+!eval/synthetic/*_SYNTHETIC.pdf
 *.xlsx
 !rubric/template.xlsx
 

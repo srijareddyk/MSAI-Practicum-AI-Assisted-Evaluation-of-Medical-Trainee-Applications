@@ -16,9 +16,9 @@ _SECTION_SPECS: list[tuple[str, re.Pattern[str], int]] = [
     ("HONORS AND AWARDS", re.compile(r"^HONORS(?:\s+AND|\s*&)\s+AWARDS\s*$", re.I), 4000),
     ("WORK EXPERIENCE", re.compile(r"^(?:WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EMPLOYMENT|EXPERIENCES?)\s*$", re.I), 4000),
     ("MSPE", re.compile(r"^MSPE\s*$", re.I), 6000),
+    ("DEAN LETTER", re.compile(r"^Dean'?s?\s+Letter\b", re.I), 8000),
     ("LETTERS OF RECOMMENDATION", re.compile(r"^LETTERS OF RECOMMENDATION\s*$", re.I), 12000),
     ("LETTER", re.compile(r"^Letter of Recommendation\b", re.I), 8000),
-    ("DEAN LETTER", re.compile(r"^Dean'?s?\s+Letter\b", re.I), 8000),
 ]
 
 _PRIORITY = (
@@ -28,13 +28,14 @@ _PRIORITY = (
     "LETTERS OF RECOMMENDATION",
     "DEAN LETTER",
     "RESEARCH",
+    "MSPE",
+    "DEAN LETTER",
     "PROJECTS",
     "PUBLICATIONS",
     "WORK EXPERIENCE",
     "CURRICULUM VITAE",
     "HONORS AND AWARDS",
     "EDUCATION",
-    "MSPE",
 )
 
 _BOILERPLATE_LINE = re.compile(
@@ -109,8 +110,6 @@ def _clean_body(name: str, body: str, cap: int) -> str:
     lines: list[str] = []
     for line in body.splitlines():
         if _is_boilerplate_line(line):
-            continue
-        if name == "MSPE" and re.search(r"CORE\s+.*Clerkship|\bClerkship\b.*\d+\.\d{3}", line, re.I):
             continue
         if _USMLE_REPORT.search(line):
             break
@@ -210,7 +209,7 @@ def _assemble_sections(sections: list[tuple[str, str, int]], max_chars: int) -> 
     return "\n\n".join(parts).strip()
 
 
-def strip_for_llm(text: str, max_chars: int = 48000) -> str:
+def strip_for_llm(text: str, max_chars: int = 12000) -> str:
     """
     Build a compact application excerpt for one LLM call.
 

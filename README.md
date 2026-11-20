@@ -69,7 +69,7 @@ Reviewer A, B, and C use the same score scale and different emphasis. A majority
 
 JSON keys in `llm_score/prompts.py` are unchanged so the API and Excel workbook keep working. The prompt text is the MSAI meaning.
 
-Step 1 still understands older ERAS-style blocks (medical school, clerkship grades, USMLE) when that text is present. Those signals stay blank on a typical master's packet.
+Step 1 reads the undergraduate institution, cumulative GPA, and work experience. It does not score medical school, clerkships, or USMLE.
 
 ## Web UI
 
@@ -177,10 +177,7 @@ application_analyzer/ Step-1 Python rules + Excel export
 rubric/template.xlsx  Screening workbook template
 ```
 
-- **Layout variance:** Different schools format transcripts differently. Clerkship lines may wrap oddly; the parser merges common Internal Medicine wraps but may miss rare formats.
-- **Medical School Performance:** Honors/High Pass detection depends on transcript wording (e.g., `H`, `COM`, `CCD`). Ambiguous cases need manual review.
-- **P/F-only schools (`2.25`):** Only applied when the applicant's extracted medical school matches a substring you list in `pass_fail_only_medical_school_keywords` in the YAML config.
-- **USMLE Step 1:** Assumes ERAS-style examination blocks; nonstandard score reports may require manual entry.
+- **Layout variance:** Institution and GPA are read from lines such as `Undergraduate institution:` and `Cumulative GPA:`. Work experience is the text under a `WORK EXPERIENCE` heading. Other transcript layouts may need those labels added.
 
 ---
 

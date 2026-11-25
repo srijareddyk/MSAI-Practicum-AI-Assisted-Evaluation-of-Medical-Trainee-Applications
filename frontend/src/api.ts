@@ -6,16 +6,18 @@ export async function fetchHealth(): Promise<HealthResponse> {
   return res.json()
 }
 
+export type AgentPayload = { id: string; title: string; short: string; focus: string }
+
 export async function startAnalysis(
   files: File[],
-  agents: string[],
+  agents: AgentPayload[],
   model: string,
 ): Promise<{ job_id: string }> {
   const form = new FormData()
   files.forEach((f) => form.append('files', f))
   form.append('mode', 'full')
   form.append('model', model)
-  form.append('agents', agents.join(','))
+  form.append('agent_defs', JSON.stringify(agents))
 
   const res = await fetch('/api/analyze', { method: 'POST', body: form })
   if (!res.ok) {
@@ -23,6 +25,17 @@ export async function startAnalysis(
     throw new Error(detail.detail || 'Failed to start analysis')
   }
   return res.json()
+}
+
+export async function fetchTemplates(agents: AgentPayload[]): Promise<Record<string, string>> {
+  const res = await fetch('/api/dev/templates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ agents }),
+  })
+  if (!res.ok) throw new Error('Unable to build prompt templates')
+  const body = await res.json()
+  return body.templates
 }
 
 export async function fetchPromptCatalog(): Promise<PromptCatalog> {

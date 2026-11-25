@@ -1610,3 +1610,512 @@
     font-size: 0.88rem;
   }
 }
+
+/* ---------- Review layout: circle stays put on the left, details on the right ---------- */
+
+.review-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.95fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.board-sticky {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 2;
+}
+
+.board-hint {
+  margin: 0.25rem 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.progress-inline {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.progress-inline .stage-label {
+  margin: 0;
+}
+
+.side-panel {
+  position: sticky;
+  top: 0.75rem;
+  max-height: calc(100vh - 1.5rem);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.side-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+
+.side-tabs button {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.side-tabs button.active {
+  color: var(--purple-deep);
+  border-bottom-color: var(--purple);
+}
+
+.side-count {
+  display: inline-block;
+  min-width: 1.4rem;
+  padding: 0 0.35rem;
+  margin-left: 0.25rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 0.75rem;
+  color: var(--slate);
+}
+
+.side-body {
+  overflow-y: auto;
+  padding: 1rem 1.05rem 1.2rem;
+  min-height: 0;
+}
+
+.side-body .evidence-panel {
+  max-width: none;
+  border-radius: 12px;
+}
+
+.side-empty h3 {
+  margin: 0 0 0.4rem;
+  color: var(--purple-deep);
+}
+
+.side-empty p {
+  margin: 0 0 0.9rem;
+  color: var(--slate);
+  line-height: 1.5;
+}
+
+.side-note {
+  display: block;
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.combined {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: start;
+  padding: 0.8rem 0.9rem;
+  margin-bottom: 0.8rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid currentColor;
+}
+
+.combined p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.result-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.result-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.result-row:hover {
+  border-color: #c9c5d0;
+  background: #fbfbfc;
+}
+
+.dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-top: 0.3rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dot.tone-split {
+  background: #b8b3c0;
+}
+
+.result-text {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.result-text strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.result-text strong em {
+  margin-left: 0.45rem;
+  font-style: normal;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: inherit;
+}
+
+.result-row .result-text strong em {
+  color: currentColor;
+}
+
+.result-text > span {
+  color: var(--slate);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.chev {
+  color: var(--muted);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.back-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0 0 0.6rem;
+  color: var(--purple);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.evidence-reason {
+  margin: 0.7rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ---------- Perspectives list and form ---------- */
+
+.perspectives-head {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+  margin-bottom: 0.9rem;
+}
+
+.perspectives-head p {
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.perspective-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.perspective {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.perspective:not(.on) {
+  background: #fbfbfc;
+}
+
+.perspective:not(.on) .perspective-name strong,
+.perspective:not(.on) .perspective-focus {
+  color: var(--muted);
+}
+
+.perspective-top {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.perspective-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.5rem;
+}
+
+.perspective-name strong {
+  color: var(--ink);
+}
+
+.perspective-tag {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.perspective-focus {
+  margin: 0.4rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--slate);
+}
+
+.perspective-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 0.45rem;
+  align-items: center;
+  font-size: 0.84rem;
+}
+
+.perspective-actions.confirm span {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.link-btn {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-weight: 600;
+  color: var(--purple);
+  cursor: pointer;
+}
+
+.link-btn.danger {
+  color: var(--fail);
+}
+
+.link-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 2.3rem;
+  height: 1.3rem;
+}
+
+.switch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.switch span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #d7d4dc;
+  pointer-events: none;
+  transition: background 0.15s ease;
+}
+
+.switch span::after {
+  content: '';
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.switch input:checked + span {
+  background: var(--purple);
+}
+
+.switch input:checked + span::after {
+  transform: translateX(1rem);
+}
+
+.switch input:focus-visible + span {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.switch input:disabled + span {
+  opacity: 0.5;
+}
+
+.agent-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.agent-form h3 {
+  margin: 0;
+  color: var(--purple-deep);
+}
+
+.form-field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.form-field > span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.form-field input,
+.form-field textarea {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  color: var(--ink);
+  background: #ffffff;
+  resize: vertical;
+}
+
+.form-field input:focus,
+.form-field textarea:focus {
+  outline: 2px solid rgba(78, 42, 132, 0.35);
+  border-color: var(--purple);
+}
+
+.form-field small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* ---------- Circle: denser nodes and hover popup ---------- */
+
+.bias-node.side-node.dense {
+  width: 100px;
+  height: 62px;
+  padding: 0.45rem 0.55rem;
+}
+
+.bias-node.dense strong {
+  font-size: 0.85rem;
+}
+
+.bias-node.tone-split.side-node {
+  border-style: dashed;
+}
+
+.agent-tip {
+  position: absolute;
+  z-index: 10;
+  width: 240px;
+  padding: 0.6rem 0.75rem 0.55rem;
+  border-radius: 12px;
+  background: var(--rail);
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(22, 21, 28, 0.22);
+  pointer-events: none;
+  border-top: 3px solid #8b84a0;
+}
+
+.agent-tip.below {
+  transform: translate(-50%, 44px);
+}
+
+.agent-tip.above {
+  transform: translate(-50%, calc(-100% - 44px));
+}
+
+.agent-tip.tone-green {
+  border-top-color: #5fc08c;
+}
+
+.agent-tip.tone-yellow {
+  border-top-color: #d9c35a;
+}
+
+.agent-tip.tone-red {
+  border-top-color: #e07a7a;
+}
+
+.agent-tip-word {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #d9d4e4;
+}
+
+.agent-tip p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.agent-tip small {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: #b9b3c6;
+}
+
+@media (max-width: 1100px) {
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .board-sticky,
+  .side-panel {
+    position: static;
+    max-height: none;
+  }
+}

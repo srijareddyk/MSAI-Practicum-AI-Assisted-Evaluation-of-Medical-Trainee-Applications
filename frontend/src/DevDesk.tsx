@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchPromptCatalog } from './api'
-import { READERS, readerById } from './readers'
+import { fetchPromptCatalog, fetchTemplates } from './api'
+import { toAgentDefs, type AgentDef } from './agents'
 import type { Job, PromptCatalog } from './types'
 
-export default function DevDesk({ job }: { job: Job | null }) {
+export default function DevDesk({ job, agents }: { job: Job | null; agents: AgentDef[] }) {
   const [catalog, setCatalog] = useState<PromptCatalog | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [source, setSource] = useState<'template' | 'sent'>('template')
   const [applicantIndex, setApplicantIndex] = useState(0)
-  const [openId, setOpenId] = useState<string>(READERS[0].id)
+  const [openId, setOpenId] = useState<string>(agents[0]?.id ?? 'excerpt')
+  const [templates, setTemplates] = useState<Record<string, string>>({})
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -19,10 +20,18 @@ export default function DevDesk({ job }: { job: Job | null }) {
       )
   }, [])
 
+  const agentKey = JSON.stringify(toAgentDefs(agents))
+  useEffect(() => {
+    fetchTemplates(JSON.parse(agentKey))
+      .then(setTemplates)
+      .catch(() => setTemplates({}))
+  }, [agentKey])
+
   useEffect(() => {
     setApplicantIndex(0)
     setSource('template')
-    setOpenId(READERS[0].id)
+    setOpenId(agents[0]?.id ?? 'excerpt')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id])
 
   useEffect(() => {
@@ -37,10 +46,10 @@ export default function DevDesk({ job }: { job: Job | null }) {
 
   const agentPanels = useMemo(() => {
     if (!catalog) return []
-    return READERS.map((reader) => {
+    return agents.map((reader) => {
       const spec = catalog.prompts.find((item) => item.id === reader.id)
       const sent = applicant?.prompts_sent?.[reader.id]
-      const body = source === 'sent' ? sent || '' : spec?.template || ''
+      const body = source === 'sent' ? sent || '' : templates[reader.id] || spec?.template || ''
       return {
         reader,
         spec,
@@ -49,7 +58,7 @@ export default function DevDesk({ job }: { job: Job | null }) {
         chars: body.length,
       }
     })
-  }, [applicant, catalog, source])
+  }, [agents, applicant, catalog, source, templates])
 
   const excerpt =
     source === 'sent'
@@ -75,7 +84,7 @@ export default function DevDesk({ job }: { job: Job | null }) {
           <p className="dev-kicker">Sub-agent prompts</p>
           <h3>Exact text sent to each reader</h3>
           <p>
-            Every selected reader is a separate local model call. Open an agent below to see the full
+            Every selected perspective is a separate model call. Open an agent below to see the full
             prompt template, or the filled prompt after a review finishes.
           </p>
         </div>
@@ -210,7 +219,7 @@ export default function DevDesk({ job }: { job: Job | null }) {
               {openPanel.reader.label}
               <span className="dev-agent-id"> · {openPanel.reader.id}</span>
             </h3>
-            <p>{readerById(openPanel.reader.id)?.detail}</p>
+            <p>{openPanel.reader.detail}</p>
             <dl className="dev-role">
               <div>
                 <dt>Reads</dt>
@@ -228,10 +237,8 @@ export default function DevDesk({ job }: { job: Job | null }) {
             {source === 'sent' && !openPanel.sent && (
               <p className="dev-vars">This sub-agent was not selected for the last review, so no prompt was sent.</p>
             )}
-            {source === 'template' && openPanel.spec && (
-              <p className="dev-vars">
-                Placeholders: {openPanel.spec.variables.map((name) => `{${name}}`).join(', ')}
-              </p>
+            {source === 'template' && (
+              <p className="dev-vars">Placeholders: {'{application_text}'}</p>
             )}
           </div>
           <pre className="dev-prompt">

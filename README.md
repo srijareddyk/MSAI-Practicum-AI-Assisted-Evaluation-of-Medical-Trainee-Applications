@@ -77,7 +77,7 @@ The frontend is the admissions review screen. It talks to a FastAPI backend that
 
 ## Privacy and data handling (important)
 
-- **Redaction before Gemini.** `llm_score/redact.py` runs locally on every packet before a hosted model sees it. It replaces the applicant's name, letter writers' names, addresses, emails, phones, dates of birth, AAMC/ERAS/USMLE IDs and URLs with placeholders such as `[APPLICANT]`, `[PERSON]` and `[ADDRESS]`. Rule-based scoring still reads the original text locally.
+- **Redaction before Gemini.** `llm_score/redact.py` runs locally on every packet before a hosted model sees it. It replaces the applicant's name, letter writers' names, addresses, emails, phones, dates of birth, AAMC/ERAS/USMLE IDs and URLs with placeholders such as `[APPLICANT]`, `[PERSON]` and `[ADDRESS]`. Test scores (USMLE/COMLEX/MCAT/shelf), GPA, percentiles and class rank become `[SCORE]`; Pass/Fail wording is kept. Rule-based scoring still reads the original text locally.
 - **Fail closed.** `llm_client.py` refuses to send any prompt to Gemini that has not been through redaction, and redaction cannot be switched off for hosted providers. The Developer tab shows the exact redacted text each agent received.
 - Redaction is pattern-based, not a legal FERPA guarantee. School names, publication titles, and unusual career details can still point to a person, so check with your program before uploading real packets.
 - These PDFs contain **identifying education records**. Store them on **encrypted drives**, limit access to reviewers, and follow your institution's **FERPA** policies.

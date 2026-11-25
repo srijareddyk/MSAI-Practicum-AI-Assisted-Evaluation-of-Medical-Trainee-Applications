@@ -43,6 +43,8 @@ export interface ComponentRead {
   title: string
   short: string
   opinion: Opinion | null
+  /** 10–15 word "why this color", shown on hover. */
+  reason?: string | null
   headline: string | null
   evidence: string[]
   concern: string | null
@@ -104,6 +106,8 @@ export interface JobProgress {
   total?: number
   file?: string
   applicant?: string
+  /** Short name of the agent currently running. */
+  agent?: string
 }
 
 export interface Job {

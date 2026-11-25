@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import threading
 import uuid
@@ -13,9 +14,10 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from api.pipeline import project_root, run_pipeline
-from llm_score.components import READERS_BY_ID
+from llm_score.components import build_reader, resolve_readers
 from llm_score.llm_client import DEFAULT_MODEL, LLM_PROVIDER, check_llm, generation_settings
 from llm_score.prompts import prompt_catalog
 
@@ -86,7 +88,7 @@ def _run_job(
     job_dir: Path,
     model: str,
     mode: str,
-    agent_ids: list[str] | None,
+    readers: list[dict[str, str]] | None,
 ) -> None:
     skip_llm = mode == "step1"
     skip_agents = mode == "briefing"
@@ -102,7 +104,7 @@ def _run_job(
             skip_llm=skip_llm,
             skip_agents=skip_agents,
             on_progress=on_progress,
-            agent_ids=agent_ids,
+            readers=readers,
         )
         _update_job(
             job_id,
@@ -116,23 +118,51 @@ def _run_job(
         _update_job(job_id, status="failed", stage="error", error=str(exc))
 
 
+def _readers_from_form(agents: str, agent_defs: str) -> list[dict[str, str]]:
+    """Readers come as full JSON definitions from the UI, or as built-in ids."""
+    try:
+        defs = json.loads(agent_defs) if agent_defs.strip() else None
+    except json.JSONDecodeError as exc:
+        raise HTTPException(400, "agent_defs must be JSON") from exc
+    if defs is not None and not isinstance(defs, list):
+        raise HTTPException(400, "agent_defs must be a list")
+    ids = [part.strip() for part in agents.split(",") if part.strip()]
+    try:
+        return resolve_readers(defs, ids)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+class TemplateRequest(BaseModel):
+    agents: list[dict[str, Any]]
+
+
+@app.post("/api/dev/templates")
+def dev_templates(body: TemplateRequest) -> dict[str, Any]:
+    """Prompt templates for the UI's current agents, including custom and edited ones."""
+    out: dict[str, str] = {}
+    for d in body.agents[:20]:
+        try:
+            reader = build_reader(str(d.get("id", "")), d.get("title", ""), d.get("short", ""), d.get("focus", ""))
+        except ValueError:
+            continue
+        out[reader["id"]] = reader["template"]
+    return {"templates": out}
+
+
 @app.post("/api/analyze")
 async def analyze(
     files: list[UploadFile] = File(...),
     mode: str = Form("full"),
     model: str = Form(DEFAULT_MODEL),
     agents: str = Form(""),
+    agent_defs: str = Form(""),
 ) -> dict[str, Any]:
     if not files:
         raise HTTPException(400, "Upload at least one PDF")
     if mode not in {"full", "briefing", "step1"}:
         raise HTTPException(400, "mode must be full, briefing, or step1")
-    agent_ids = [part.strip() for part in agents.split(",") if part.strip()]
-    unknown = [agent_id for agent_id in agent_ids if agent_id not in READERS_BY_ID]
-    if unknown:
-        raise HTTPException(400, f"Unknown reader: {', '.join(unknown)}")
-    if agent_ids and len(agent_ids) < 2:
-        raise HTTPException(400, "Pick at least two readers")
+    readers = _readers_from_form(agents, agent_defs)
 
     for f in files:
         if not (f.filename or "").lower().endswith(".pdf"):
@@ -164,8 +194,8 @@ async def analyze(
             "progress": {},
             "mode": mode,
             "model": model,
-            "agents": agent_ids,
-            "files": saved_names,
+            "agents": [r["id"] for r in readers],
+            "files": [f"Application {i + 1}.pdf" for i in range(len(saved_names))],
             "applicants": [],
             "excel_name": None,
             "error": None,
@@ -176,12 +206,12 @@ async def analyze(
 
     thread = threading.Thread(
         target=_run_job,
-        args=(job_id, pdf_paths, job_dir, model, mode, agent_ids or None),
+        args=(job_id, pdf_paths, job_dir, model, mode, readers or None),
         daemon=True,
     )
     thread.start()
 
-    return {"job_id": job_id, "status": "running", "files": saved_names}
+    return {"job_id": job_id, "status": "running", "files": len(saved_names)}
 
 
 def _packet_label(filename: str) -> str:
@@ -215,14 +245,12 @@ def analyze_local(
     mode: str = Form("full"),
     model: str = Form(DEFAULT_MODEL),
     agents: str = Form(""),
+    agent_defs: str = Form(""),
 ) -> dict[str, Any]:
     if mode not in {"full", "briefing", "step1"}:
         raise HTTPException(400, "mode must be full, briefing, or step1")
-    agent_ids = [part.strip() for part in agents.split(",") if part.strip()]
-    unknown = [agent_id for agent_id in agent_ids if agent_id not in READERS_BY_ID]
-    if unknown:
-        raise HTTPException(400, f"Unknown reader: {', '.join(unknown)}")
-    if len(agent_ids) < 2:
+    readers = _readers_from_form(agents, agent_defs)
+    if len(readers) < 2:
         raise HTTPException(400, "Pick at least two readers")
 
     available = {path.name: path for path in _local_packet_paths()}
@@ -245,7 +273,7 @@ def analyze_local(
             "progress": {},
             "mode": mode,
             "model": model,
-            "agents": agent_ids,
+            "agents": [r["id"] for r in readers],
             "files": requested,
             "applicants": [],
             "excel_name": None,
@@ -256,7 +284,7 @@ def analyze_local(
         }
     thread = threading.Thread(
         target=_run_job,
-        args=(job_id, pdf_paths, job_dir, model, mode, agent_ids),
+        args=(job_id, pdf_paths, job_dir, model, mode, readers),
         daemon=True,
     )
     thread.start()

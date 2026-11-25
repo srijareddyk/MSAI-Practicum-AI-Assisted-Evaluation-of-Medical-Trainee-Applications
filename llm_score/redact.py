@@ -93,10 +93,13 @@ _NAME_LABEL = re.compile(
     r"(?im)^(?:Applicant(?:'s)?\s+Name|Preferred\s+Name|Legal\s+Name|"
     r"Full\s+Name|Name)\s*:?\s*(.+)$"
 )
-# Inline forms such as "Applicant: Jordan Rivera | AAMC ID: ..." or "Candidate Name - Jane Doe".
+# Inline forms such as "Applicant: Jordan Rivera | AAMC ID: ...". The label needs a
+# colon and the name must be capitalized words, so prose like "student-run clinic"
+# is never mistaken for a name.
 _INLINE_NAME_LABEL = re.compile(
-    r"(?i)\b(?:Applicant|Candidate|Student)(?:'s)?(?:\s+(?:Full\s+|Legal\s+)?Name)?\s*[:\-]\s*"
-    r"([A-Z][A-Za-z'\-]+(?:[ \t]+[A-Z][A-Za-z'\-.]*){0,3})"
+    r"\b(?:[Aa]pplicant|APPLICANT|[Cc]andidate|CANDIDATE)(?:'s)?"
+    r"(?:\s+(?:[Ff]ull\s+|[Ll]egal\s+)?(?:[Nn]ame|NAME))?\s*:\s*"
+    r"([A-Z][a-zA-Z'\-]+(?:[ \t]+[A-Z][a-zA-Z'\-]*\.?){0,3})"
 )
 _ADDRESS_LABEL = re.compile(
     r"(?im)^((?:Current|Permanent|Mailing|Home|Local|Work)\s+Address|Address)\s*:?\s*(.*)$"
@@ -111,6 +114,37 @@ _IDENTITY_LABEL = re.compile(
     r"Visa(?: Type)?|Citizenship|NPI"
     r")\s*:?\s*(.*)$"
 )
+
+
+# Test scores, GPA, percentiles and class rank. Faculty do not want these used, so
+# the number is replaced and the label kept ("Step 1: [SCORE]"). Pass/Fail words stay.
+_SCORE = "[SCORE]"
+_SCORE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("gpa", re.compile(
+        r"(\b(?:cumulative|overall|science|BCPM|undergraduate|medical school)?\s*GPA\b[^\n\d]{0,20})"
+        r"\d\.\d{1,3}(?:\s*(?:/|out of)\s*\d(?:\.\d+)?)?", re.I)),
+    ("gpa", re.compile(r"()\b\d\.\d{1,3}(?:\s*/\s*4(?:\.0+)?)?(?=\s+(?:cumulative\s+|overall\s+)?GPA\b)", re.I)),
+    ("usmle", re.compile(
+        r"(\b(?:USMLE\s+)?Step\s*(?:1|2|3)(?:\s*(?:CK|CS))?\b[^\n\d]{0,30})\d{3}\b", re.I)),
+    ("comlex", re.compile(r"(\bCOMLEX(?:-USA)?\s+Level\s*\d(?:\s*-?\s*CE)?\b[^\n\d]{0,30})\d{3}\b", re.I)),
+    ("mcat", re.compile(r"(\bMCAT\b[^\n\d]{0,20})\d{3}\b", re.I)),
+    ("percentile", re.compile(r"()\b\d{1,2}(?:st|nd|rd|th)?\s*percentile\b", re.I)),
+    ("percentile", re.compile(r"(\b(?:top|bottom)\s+)\d{1,2}\s*%", re.I)),
+    ("class_rank", re.compile(r"(\branked\s+)\d+\s+(?:of|out of)\s+\d+", re.I)),
+    ("class_rank", re.compile(r"(\bclass rank\b[^\n\d]{0,15})\d+(?:\s*(?:/|of|out of)\s*\d+)?", re.I)),
+    ("shelf", re.compile(r"(\b(?:shelf|NBME subject exam)\b[^\n\d]{0,25})\d{2,3}\b", re.I)),
+)
+
+
+def redact_scores(text: str) -> tuple[str, list[str]]:
+    """Replace test scores, GPA, percentiles and class rank with [SCORE]."""
+    notes: list[str] = []
+    out = text
+    for label, pattern in _SCORE_PATTERNS:
+        out, count = pattern.subn(lambda m: m.group(1) + _SCORE, out)
+        if count:
+            notes.append(f"{label}: {count}")
+    return out, notes
 
 
 def cloud_llm_enabled() -> bool:
@@ -285,10 +319,12 @@ def redact_application_text(
     harvest_from: str | None = None,
 ) -> tuple[str, list[str]]:
     out, notes = apply_identity_redactions(text, facts, source, harvest_from=harvest_from)
+    out, score_notes = redact_scores(out)
+    notes.extend(score_notes)
     header = (
         REDACTION_MARKER + " "
         "The applicant is referred to only as [APPLICANT]. "
-        "Home addresses, emails, phones, dates of birth, and applicant IDs "
-        "have been removed. Do not guess a real name or contact details.\n\n"
+        "Home addresses, emails, phones, dates of birth, applicant IDs, test scores, "
+        "and GPA have been removed. Do not guess a real name, contact details, or scores.\n\n"
     )
     return header + out, notes

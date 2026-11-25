@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from application_analyzer.facts import ExtractedFacts
-from llm_score.redact import apply_identity_redactions, redact_application_text
+from llm_score.redact import apply_identity_redactions, redact_application_text, redact_scores
 
 
 def test_redacts_name_address_contact_and_ids() -> None:
@@ -59,8 +59,33 @@ def test_inline_applicant_label_without_name_in_filename() -> None:
     assert "AU99999" not in redacted
 
 
+
+def test_prose_is_not_mistaken_for_a_name() -> None:
+    source = Path("upload.pdf")
+    facts = ExtractedFacts(source_path=str(source), applicant_name=None)
+    original = "Applicant: Jordan Rivera\nVolunteer, student-run clinic. Regional Education Center."
+    redacted, _ = apply_identity_redactions(original, facts, source, harvest_from=original)
+    assert "student-run clinic. Regional Education Center." in redacted
+
+
+def test_scores_and_gpa_removed_but_pass_fail_kept() -> None:
+    original = (
+        "Cumulative GPA: 3.82/4.0. She earned a 3.9 GPA in science. USMLE Step 1: Pass. "
+        "Step 2 CK score of 251. COMLEX Level 2 612. MCAT 517. 92nd percentile; top 10% of the class. "
+        "Ranked 12 of 180. Class rank: 4/150. Surgery shelf exam 88. Clerkship lasted 8 weeks."
+    )
+    out, notes = redact_scores(original)
+    for leaked in ("3.82", "3.9", "251", "612", "517", "92nd", "10%", "12 of 180", "4/150", " 88"):
+        assert leaked not in out, leaked
+    assert "Step 1: Pass" in out
+    assert "8 weeks" in out
+    assert notes
+
+
 if __name__ == "__main__":
     test_redacts_name_address_contact_and_ids()
     test_letter_writers_redacted_and_not_mistaken_for_addresses()
     test_inline_applicant_label_without_name_in_filename()
+    test_prose_is_not_mistaken_for_a_name()
+    test_scores_and_gpa_removed_but_pass_fail_kept()
     print("ok")

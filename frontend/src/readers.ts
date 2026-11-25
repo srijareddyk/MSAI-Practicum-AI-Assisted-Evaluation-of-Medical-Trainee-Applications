@@ -59,18 +59,6 @@ export const READERS: ReaderDef[] = [
       'This sub-agent stays on clinical narrative. It does not turn grades into points. Missing clinical text is yellow with a note that the section was not found.',
   },
   {
-    id: 'academics',
-    short: 'Academics',
-    label: 'Academic record',
-    hint: 'School and Step 1',
-    reads: 'Medical school record and Step 1 language in the packet.',
-    looksFor:
-      'Whether the academic path supports residency training, described in words — school context and exam status without printing scores or GPA.',
-    returns: 'A color for academics, with qualitative snippets and no numeric scores in the write-up.',
-    detail:
-      'This sub-agent is optional by default. It is forbidden from putting USMLE scores, GPAs, or honor counts into the headline or evidence. Faculty still see the raw packet separately.',
-  },
-  {
     id: 'commitment',
     short: 'Commitment',
     label: 'Ophthalmology commitment',

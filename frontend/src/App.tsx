@@ -1,20 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchHealth, fetchJob, startAnalysis } from './api'
 import type { HealthResponse, Job } from './types'
-import CircleBoard from './CircleBoard'
+import CircleBoard, { WORDS } from './CircleBoard'
 import DevDesk from './DevDesk'
-import { DEFAULT_READERS, READERS, readerById } from './readers'
+import SidePanel, { type PanelTab } from './SidePanel'
+import { toAgentDefs, useAgents } from './agents'
 import './App.css'
 
 const STAGE_COPY: Record<string, string> = {
   queued: 'Queued',
   extracting: 'Reading the packet',
-  statement: 'Personal statement sub-agent',
-  letters: 'Letters sub-agent',
-  research: 'Research sub-agent',
-  clinical: 'Clinical sub-agent',
-  academics: 'Academics sub-agent',
-  commitment: 'Commitment sub-agent',
+  redacting: 'Removing names and contact details',
   writing_excel: 'Saving the file',
   complete: 'Complete',
   error: 'Error',
@@ -78,10 +74,12 @@ function Dropzone({
         <ul className="file-list">
           {files.map((f, i) => (
             <li key={`${f.name}-${i}`}>
-              <span>{f.name}</span>
+              <span>
+                Application {i + 1} · PDF, {Math.max(1, Math.round(f.size / 1024))} KB
+              </span>
               <button
                 type="button"
-                aria-label={`Remove ${f.name}`}
+                aria-label={`Remove application ${i + 1}`}
                 onClick={() => onFiles(files.filter((_, j) => j !== i))}
               >
                 Remove
@@ -94,32 +92,32 @@ function Dropzone({
   )
 }
 
-function progressPercent(job: Job): number {
+function progressPercent(job: Job, agentIds: string[]): number {
   if (job.status === 'completed' || job.status === 'failed') return 100
   const total = job.progress.total || 1
   const index = job.progress.index ?? 0
-  const stageWeights: Record<string, number> = {
-    queued: 0.05,
-    extracting: 0.12,
-    statement: 0.28,
-    letters: 0.42,
-    research: 0.56,
-    clinical: 0.7,
-    academics: 0.82,
-    commitment: 0.9,
-    applicant_done: 0.95,
+  const agentAt = agentIds.indexOf(job.stage)
+  const fixed: Record<string, number> = {
+    queued: 0.03,
+    extracting: 0.08,
+    redacting: 0.12,
+    applicant_done: 0.96,
     writing_excel: 0.98,
   }
-  const base = index / total
-  const within = (stageWeights[job.stage] ?? 0.2) / total
-  return Math.min(99, Math.round((base + within) * 100))
+  const within = agentAt >= 0 ? 0.15 + (0.8 * agentAt) / Math.max(agentIds.length, 1) : (fixed[job.stage] ?? 0.1)
+  return Math.min(99, Math.round(((index + within) / total) * 100))
 }
 
 export default function App() {
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [files, setFiles] = useState<File[]>([])
-  const [readers, setReaders] = useState<string[]>([...DEFAULT_READERS])
-  const [focusId, setFocusId] = useState<string>(DEFAULT_READERS[0])
+  const store = useAgents()
+  const { agents, enabled } = store
+  const [panelTab, setPanelTab] = useState<PanelTab>('perspectives')
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [applicantIndex, setApplicantIndex] = useState(0)
+  /** Agents sent with the running/last review, so progress and the circle match it. */
+  const [runAgentIds, setRunAgentIds] = useState<string[]>([])
   const [model, setModel] = useState('qwen3:8b')
   const [job, setJob] = useState<Job | null>(null)
   const [busy, setBusy] = useState(false)
@@ -148,7 +146,12 @@ export default function App() {
       try {
         const next = await fetchJob(job.id)
         setJob(next)
-        if (next.status !== 'running') setBusy(false)
+        if (next.status !== 'running') {
+          setBusy(false)
+          setApplicantIndex(0)
+          setOpenId(null)
+          if (next.status === 'completed') setPanelTab('results')
+        }
       } catch {
         /* keep polling */
       }
@@ -158,7 +161,34 @@ export default function App() {
 
   const ollamaOk = health?.ollama.ok && health.ollama.available
   const apiOk = health?.status === 'ok'
-  const focused = readerById(focusId) || READERS[0]
+  const done = job?.status === 'completed' ? job : null
+  const applicant = done?.applicants[applicantIndex]
+  // After a review the circle shows the perspectives that actually ran.
+  const circleAgents = useMemo(() => {
+    if (!applicant?.components?.length) return agents
+    const ran = new Set(applicant.components.map((read) => read.id))
+    const shown = agents.filter((agent) => ran.has(agent.id))
+    // A perspective deleted after the run still shows, named as it was then.
+    for (const read of applicant.components) {
+      if (!shown.some((agent) => agent.id === read.id)) {
+        shown.push({
+          id: read.id,
+          short: read.short,
+          label: read.title,
+          title: read.title,
+          focus: read.title,
+          hint: '',
+          reads: '',
+          looksFor: '',
+          returns: '',
+          detail: '',
+          builtIn: false,
+          edited: false,
+        })
+      }
+    }
+    return shown
+  }, [agents, applicant])
 
   const statusLabel = useMemo(() => {
     if (!health) return 'Checking services'
@@ -171,12 +201,14 @@ export default function App() {
     return gemini ? `Ready · Gemini ${health.default_model}` : 'Ready on this machine'
   }, [health, apiOk])
 
-  const toggleReader = useCallback((id: string) => {
-    setFocusId(id)
-    setReaders((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    )
-  }, [])
+  const onToggle = useCallback(
+    (id: string) => {
+      // Changing who runs starts a fresh board.
+      if (done) setJob(null)
+      store.toggle(id)
+    },
+    [done, store],
+  )
 
   const onSubmit = useCallback(async () => {
     setError(null)
@@ -184,21 +216,24 @@ export default function App() {
       setError('Upload a PDF to begin.')
       return
     }
-    if (readers.length < 2) {
-      setError('Turn on at least two sub-agents before starting.')
+    if (enabled.length < 2) {
+      setError('Turn on at least two perspectives before starting.')
       return
     }
+    const running = agents.filter((agent) => enabled.includes(agent.id))
     setBusy(true)
     setJob(null)
+    setOpenId(null)
+    setRunAgentIds(running.map((agent) => agent.id))
     try {
-      const { job_id } = await startAnalysis(files, readers, model)
+      const { job_id } = await startAnalysis(files, toAgentDefs(running), model)
       const initial = await fetchJob(job_id)
       setJob(initial)
     } catch (err) {
       setBusy(false)
       setError(err instanceof Error ? err.message : 'Could not start the review')
     }
-  }, [files, readers, model])
+  }, [files, enabled, agents, model])
 
   return (
     <div className="shell">
@@ -225,19 +260,22 @@ export default function App() {
           {statusLabel}
         </div>
         <div className="rail-block">
-          <h2>Sub-agents</h2>
+          <h2>Perspectives</h2>
           <ul className="agent-rail">
-            {READERS.map((reader) => {
-              const on = readers.includes(reader.id)
+            {agents.map((agent) => {
+              const on = enabled.includes(agent.id)
               return (
-                <li key={reader.id}>
+                <li key={agent.id}>
                   <button
                     type="button"
-                    className={`agent-rail-btn ${focusId === reader.id ? 'focused' : ''} ${on ? 'on' : ''}`}
-                    onClick={() => setFocusId(reader.id)}
+                    className={`agent-rail-btn ${on ? 'on' : ''}`}
+                    onClick={() => {
+                      setDesk('review')
+                      setPanelTab('perspectives')
+                    }}
                   >
-                    <strong>{reader.short}</strong>
-                    <span>{reader.reads}</span>
+                    <strong>{agent.short}</strong>
+                    <span>{agent.builtIn ? agent.reads : 'Custom perspective'}</span>
                   </button>
                 </li>
               )
@@ -245,7 +283,7 @@ export default function App() {
           </ul>
         </div>
         <p className="rail-note">
-          Each sub-agent reads one part of the packet, returns a color, and cites a short snippet.
+          Each perspective reads one part of the packet, returns a color, and cites a short snippet.
           Faculty decide who is invited to interview.
         </p>
       </aside>
@@ -258,7 +296,7 @@ export default function App() {
             <p className="lede">
               {desk === 'dev'
                 ? 'Inspect the exact prompt template or the filled prompt that went to each local sub-agent.'
-                : 'Upload a packet, choose which sub-agents run, then open a color for cited evidence from the file.'}
+                : 'Upload a packet, choose which perspectives run, then hover or click a color for the reason and cited evidence.'}
             </p>
           </div>
         </header>
@@ -266,68 +304,6 @@ export default function App() {
         <div className="desk">
           {desk === 'review' && (
             <section className="desk-section no-print">
-              <div className="agent-brief">
-                <div className="agent-brief-head">
-                  <div>
-                    <p className="evidence-label">What this sub-agent does</p>
-                    <h2 className="section-title">{focused.label}</h2>
-                  </div>
-                  <button
-                    type="button"
-                    className={`btn ${readers.includes(focused.id) ? 'btn-primary' : 'btn-ghost'}`}
-                    onClick={() => toggleReader(focused.id)}
-                    disabled={busy}
-                  >
-                    {readers.includes(focused.id) ? 'Remove from review' : 'Include in review'}
-                  </button>
-                </div>
-                <p className="agent-detail">{focused.detail}</p>
-                <dl className="agent-facts">
-                  <div>
-                    <dt>Reads</dt>
-                    <dd>{focused.reads}</dd>
-                  </div>
-                  <div>
-                    <dt>Looks for</dt>
-                    <dd>{focused.looksFor}</dd>
-                  </div>
-                  <div>
-                    <dt>Returns</dt>
-                    <dd>{focused.returns}</dd>
-                  </div>
-                </dl>
-                <div className="agent-picker" role="group" aria-label="Choose sub-agents">
-                  {READERS.map((reader) => {
-                    const on = readers.includes(reader.id)
-                    return (
-                      <button
-                        key={reader.id}
-                        type="button"
-                        className={`agent-pill ${on ? 'on' : ''} ${focusId === reader.id ? 'focused' : ''}`}
-                        onClick={() => {
-                          setFocusId(reader.id)
-                          if (!busy) {
-                            setReaders((current) =>
-                              current.includes(reader.id)
-                                ? current
-                                : [...current, reader.id],
-                            )
-                          }
-                        }}
-                        disabled={busy}
-                      >
-                        <span>{reader.short}</span>
-                        <small>{on ? 'On' : 'Off'}</small>
-                      </button>
-                    )
-                  })}
-                </div>
-                <p className="agent-hint">
-                  Select a sub-agent to read what it does. Use <b>Include in review</b> /{' '}
-                  <b>Remove from review</b> to change who runs. At least two must stay on.
-                </p>
-              </div>
-
               <div className="upload-block">
                 <Dropzone files={files} onFiles={setFiles} />
                 <div className="controls">
@@ -345,54 +321,97 @@ export default function App() {
                     type="button"
                     className="btn btn-primary"
                     onClick={onSubmit}
-                    disabled={busy || !files.length || readers.length < 2}
+                    disabled={busy || !files.length || enabled.length < 2}
                   >
-                    {busy ? 'Reviewing…' : 'Begin review'}
+                    {busy ? 'Reviewing…' : `Begin review · ${enabled.length} perspectives`}
                   </button>
                 </div>
+                {error && <div className="error-banner">{error}</div>}
+                {job?.status === 'running' && (
+                  <div className="progress-inline">
+                    <p className="stage-label">
+                      <strong>
+                        {job.progress.agent
+                          ? `${job.progress.agent} perspective`
+                          : STAGE_COPY[job.stage] || 'Working'}
+                      </strong>
+                      {job.progress.applicant ? ` · ${job.progress.applicant}` : ''}
+                      {job.progress.total && job.progress.total > 1
+                        ? ` · ${(job.progress.index ?? 0) + 1} of ${job.progress.total}`
+                        : ''}
+                    </p>
+                    <div className="progress-track">
+                      <div className="progress-bar" style={{ width: `${progressPercent(job, runAgentIds)}%` }} />
+                    </div>
+                  </div>
+                )}
+                {job?.status === 'failed' && (
+                  <div className="error-banner">Review failed: {job.error || 'Unknown error'}</div>
+                )}
               </div>
 
-              <div className="board-block">
-                <div className="board-head">
-                  <h2 className="section-title">Application in the center</h2>
-                  <p className="section-sub">
-                    Side cards are the sub-agents. After a review they turn green, yellow, or red. Click a
-                    finished card for paragraph snippets cited from the packet.
+              {done && done.applicants.length > 1 && (
+                <div className="applicant-tabs" aria-label="Applications in this review">
+                  {done.applicants.map((item, index) => (
+                    <button
+                      key={item.file}
+                      type="button"
+                      className={`tab ${index === applicantIndex ? 'active' : ''}`}
+                      onClick={() => {
+                        setApplicantIndex(index)
+                        setOpenId(null)
+                      }}
+                    >
+                      {item.applicant_name || `Applicant ${index + 1}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="review-grid">
+                <div className="board-sticky">
+                  <CircleBoard
+                    agents={circleAgents}
+                    enabledIds={applicant ? circleAgents.map((agent) => agent.id) : enabled}
+                    applicant={applicant}
+                    centerDetail={
+                      applicant?.combined
+                        ? `${WORDS[applicant.combined.opinion]} · ${applicant.components?.length ?? 0} perspectives`
+                        : files.length
+                          ? `${files.length} packet${files.length > 1 ? 's' : ''} ready`
+                          : 'Upload a PDF above'
+                    }
+                    openId={openId}
+                    onOpen={(id) => {
+                      setOpenId(id)
+                      setPanelTab('results')
+                    }}
+                    onToggle={onToggle}
+                    disabled={busy}
+                  />
+                  <p className="board-hint">
+                    {applicant
+                      ? 'Hover a perspective for the short reason. Click it for quoted evidence.'
+                      : 'Click a perspective to turn it on or off. Hover to see what it looks for.'}
                   </p>
                 </div>
-                <CircleBoard
-                  job={job?.status === 'completed' ? job : null}
-                  centerLabel={files[0]?.name.replace(/\.pdf$/i, '') || 'No packet yet'}
-                  centerDetail={files.length ? `${files.length} uploaded` : 'Upload a PDF above'}
-                  selectedIds={readers}
-                  disabled={busy}
-                  onToggle={toggleReader}
+                <SidePanel
+                  tab={panelTab}
+                  onTab={setPanelTab}
+                  agents={agents}
+                  enabledIds={enabled}
+                  applicant={applicant}
+                  openId={openId}
+                  onOpen={setOpenId}
+                  busy={busy}
+                  canAdd={store.canAdd}
+                  onToggle={onToggle}
+                  onAdd={store.add}
+                  onUpdate={store.update}
+                  onRemove={store.remove}
+                  onReset={store.reset}
                 />
               </div>
-
-              {error && <div className="error-banner">{error}</div>}
-            </section>
-          )}
-
-          {job && job.status === 'running' && (
-            <section className="desk-section no-print">
-              <h2 className="section-title">In progress</h2>
-              <p className="stage-label">
-                <strong>{STAGE_COPY[job.stage] || job.stage}</strong>
-                {job.progress.applicant ? ` · ${job.progress.applicant}` : ''}
-                {job.progress.total
-                  ? ` · ${(job.progress.index ?? 0) + 1} of ${job.progress.total}`
-                  : ''}
-              </p>
-              <div className="progress-track">
-                <div className="progress-bar" style={{ width: `${progressPercent(job)}%` }} />
-              </div>
-            </section>
-          )}
-
-          {job?.status === 'failed' && (
-            <section className="desk-section no-print">
-              <div className="error-banner">Review failed: {job.error || 'Unknown error'}</div>
             </section>
           )}
 
@@ -403,7 +422,7 @@ export default function App() {
                 Template is the standing instruction. After you run a review, switch to{' '}
                 <b>Sent to the model</b> to see the exact filled prompt each selected sub-agent received.
               </p>
-              <DevDesk job={job} />
+              <DevDesk job={job} agents={agents} />
             </section>
           )}
         </div>

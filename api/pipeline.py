@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable
 
@@ -62,7 +62,7 @@ def run_pipeline(
     skip_agents: bool = False,
     school_list: Path | None = None,
     on_progress: ProgressCallback | None = None,
-    agent_ids: list[str] | None = None,
+    readers: list[dict[str, str]] | None = None,
 ) -> PipelineResult:
     root = project_root()
     template_path = template or (root / "rubric" / "template.xlsx")
@@ -84,11 +84,15 @@ def run_pipeline(
     total = len(pdf_paths)
 
     for index, pdf in enumerate(pdf_paths):
-        emit("extracting", index=index, total=total, file=pdf.name)
+        emit("extracting", index=index, total=total)
         text = extract_text_from_pdf(pdf)
         facts = extract_facts_from_text(text, pdf)
         scores = compute_scores(facts, text, str(school_list) if school_list else None)
-        items.append((facts, scores))
+        # The real name stays in `facts` only so redaction can find it. Everything
+        # written out (UI, Excel, markdown, progress) uses an anonymous label.
+        label = f"Applicant {index + 1}" if total > 1 else "Applicant"
+        public_facts = replace(facts, applicant_name=label, source_path=f"{label}.pdf")
+        items.append((public_facts, scores))
 
         brief: dict | None = None
         doc_a: AgentReview | None = None
@@ -106,22 +110,22 @@ def run_pipeline(
             """Text for the model. Identifiers are scrubbed locally first for hosted models."""
             excerpt = tighten_text(strip_for_llm(text))
             if cloud_llm_enabled():
-                emit("redacting", index=index, total=total, file=pdf.name)
+                emit("redacting", index=index, total=total, applicant=label)
                 excerpt, notes = redact_application_text(excerpt, facts, pdf, harvest_from=text)
                 redaction_notes.extend(notes)
             return excerpt
 
-        if agent_ids:
+        if readers:
             excerpt = llm_excerpt()
             stripped_len = len(excerpt)
             prompts_sent["application_excerpt"] = excerpt
-            name = facts.applicant_name or pdf.name
+            name = label
             synthetic_demo = is_synthetic_demo_packet(pdf.name)
-            for agent_id in agent_ids:
-                emit(agent_id, index=index, total=total, applicant=name)
+            for reader in readers:
+                emit(reader["id"], index=index, total=total, applicant=name, agent=reader["short"])
                 components.append(
                     run_component(
-                        agent_id,
+                        reader,
                         excerpt,
                         model=model,
                         prompts_sent=prompts_sent,
@@ -133,16 +137,16 @@ def run_pipeline(
             excerpt = llm_excerpt()
             stripped_len = len(excerpt)
             prompts_sent["application_excerpt"] = excerpt
-            name = facts.applicant_name or pdf.name
+            name = label
             emit("briefing", index=index, total=total, applicant=name)
             prompts_sent["brief"] = render_user_prompt(BRIEF_PROMPT, application_text=excerpt)
             brief = extract_reviewer_brief(excerpt, model=model)
             brief_md = briefing_to_markdown(
-                facts.applicant_name or pdf.stem,
+                label,
                 brief,
-                source_file=pdf.name,
+                source_file=f"{label}.pdf",
             )
-            brief_path = briefings_dir / _safe_md_filename(facts.applicant_name, pdf, "_brief")
+            brief_path = briefings_dir / _safe_md_filename(label, pdf, "_brief")
             brief_path.write_text(brief_md, encoding="utf-8")
             markdown_files["brief"] = brief_path.name
 
@@ -155,9 +159,9 @@ def run_pipeline(
                     DOC_A_PROMPT, application_text=excerpt, briefing_json=briefing_json
                 )
                 doc_a = run_doc_a(excerpt, briefing_json, model=model)
-                doc_a_path = briefings_dir / _safe_md_filename(facts.applicant_name, pdf, "_doc_a")
+                doc_a_path = briefings_dir / _safe_md_filename(label, pdf, "_doc_a")
                 doc_a_path.write_text(
-                    review_to_markdown(facts.applicant_name or pdf.stem, doc_a, source_file=pdf.name),
+                    review_to_markdown(label, doc_a, source_file=pdf.name),
                     encoding="utf-8",
                 )
                 markdown_files["doc_a"] = doc_a_path.name
@@ -167,9 +171,9 @@ def run_pipeline(
                     DOC_B_PROMPT, application_text=excerpt, briefing_json=briefing_json
                 )
                 doc_b = run_doc_b(excerpt, briefing_json, model=model)
-                doc_b_path = briefings_dir / _safe_md_filename(facts.applicant_name, pdf, "_doc_b")
+                doc_b_path = briefings_dir / _safe_md_filename(label, pdf, "_doc_b")
                 doc_b_path.write_text(
-                    review_to_markdown(facts.applicant_name or pdf.stem, doc_b, source_file=pdf.name),
+                    review_to_markdown(label, doc_b, source_file=pdf.name),
                     encoding="utf-8",
                 )
                 markdown_files["doc_b"] = doc_b_path.name
@@ -179,9 +183,9 @@ def run_pipeline(
                     DOC_C_PROMPT, application_text=excerpt, briefing_json=briefing_json
                 )
                 doc_c = run_doc_c(excerpt, briefing_json, model=model)
-                doc_c_path = briefings_dir / _safe_md_filename(facts.applicant_name, pdf, "_doc_c")
+                doc_c_path = briefings_dir / _safe_md_filename(label, pdf, "_doc_c")
                 doc_c_path.write_text(
-                    review_to_markdown(facts.applicant_name or pdf.stem, doc_c, source_file=pdf.name),
+                    review_to_markdown(label, doc_c, source_file=pdf.name),
                     encoding="utf-8",
                 )
                 markdown_files["doc_c"] = doc_c_path.name
@@ -189,8 +193,8 @@ def run_pipeline(
         agent_reviews.append((doc_a, doc_b, doc_c))
         applicants.append(
             {
-                "file": pdf.name,
-                "applicant_name": facts.applicant_name,
+                "file": f"{label}.pdf",
+                "applicant_name": label,
                 "stripped_chars": stripped_len,
                 "redacted_for_llm": bool(redaction_notes) or (stripped_len > 0 and cloud_llm_enabled()),
                 "redaction_notes": redaction_notes,
@@ -214,7 +218,7 @@ def run_pipeline(
                 "combined": combined,
             }
         )
-        emit("applicant_done", index=index, total=total, applicant=facts.applicant_name or pdf.name)
+        emit("applicant_done", index=index, total=total, applicant=label)
 
     emit("writing_excel", total=total)
     if len(items) == 1:
